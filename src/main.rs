@@ -2,7 +2,9 @@
 #![no_main]
 
 mod mpu6050;
+mod motor_drive;
 
+use motor_drive::MotorDrive;
 use mpu6050::Mpu6050;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
@@ -13,15 +15,30 @@ use esp_hal::timer::PeriodicTimer;
 use esp_hal::Blocking;
 use esp_hal::i2c;
 use esp_println::println;
+use esp_hal::ledc;
+use esp_hal::ledc::{
+    Ledc,
+    LSGlobalClkSource,
+    timer::TimerIFace,
+    channel::ChannelIFace,
+};
 
 use core::cell::RefCell;
 use critical_section::Mutex;
 use esp_hal::handler;
+use static_cell::StaticCell;
 
 extern crate alloc;
 
+struct TopState {
+    mpu: Mpu6050<'static, Blocking>,
+    motors: MotorDrive,
+    periodic_timer: PeriodicTimer<'static, Blocking>,
+}
+
 
 static MPU_6050: Mutex<RefCell<Option<Mpu6050<'static, Blocking>>>> = Mutex::new(RefCell::new(None));
+static MOTOR_DRIVE: Mutex<RefCell<Option<MotorDrive>>> = Mutex::new(RefCell::new(None));
 static TIMER: Mutex<RefCell<Option<PeriodicTimer<'static, Blocking>>>> = Mutex::new(RefCell::new(None));
 
 #[handler]
@@ -73,6 +90,37 @@ fn main() -> ! {
     println!("Configuring mpu 6050");
     mpu.configure_mpu_6050();
     println!("mpu 6050 configured");
+
+    println!("Initializing motor pwms");
+    let mut ledc = Ledc::new(peripherals.LEDC);
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
+    static LSTIMER0: StaticCell<ledc::timer::Timer<'_, ledc::LowSpeed>> = StaticCell::new();
+    let lstimer0 = LSTIMER0.init(ledc.timer::<ledc::LowSpeed>(ledc::timer::Number::Timer0));
+    lstimer0
+    .configure(ledc::timer::config::Config {
+        duty: ledc::timer::config::Duty::Duty5Bit,
+        clock_source: ledc::timer::LSClockSource::APBClk,
+        frequency: Rate::from_khz(24),
+    }).unwrap();
+    let common_chanconfig = ledc::channel::config::Config {
+        timer: lstimer0,
+        duty_pct: 0,
+        pin_config: ledc::channel::config::PinConfig::PushPull,
+    };
+    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO2);
+    pwm0.configure(common_chanconfig).unwrap();
+    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO3);
+    pwm1.configure(common_chanconfig).unwrap();
+    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO4);
+    pwm2.configure(common_chanconfig).unwrap();
+    let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO5);
+    pwm3.configure(common_chanconfig).unwrap();
+
+    let mut motor_drive = MotorDrive::new(pwm0, pwm1, pwm2, pwm3);
+    println!("Motor pwms initialized");
+
+
+    println!("Initializing periodic timer interrupt");
     let timg1 = TimerGroup::new(peripherals.TIMG1);
     let mut ptimer = PeriodicTimer::new(timg1.timer0);
     ptimer.set_interrupt_handler(timed_interrupt_handler);
@@ -81,8 +129,11 @@ fn main() -> ! {
         .expect("Failed to start periodic timer1");
     critical_section::with(|cs| {
         MPU_6050.borrow_ref_mut(cs).replace(mpu);
+        MOTOR_DRIVE.borrow_ref_mut(cs).replace(motor_drive);
         TIMER.borrow_ref_mut(cs).replace(ptimer);
     });
+
+    
 
     loop {
     //    read_motion_data(&mut i2c).show();
