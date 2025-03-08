@@ -5,8 +5,9 @@ use esp_hal::ledc::{
 
 type MotorChannel = Channel<'static, ledc::LowSpeed>;
 
-// Yeah.. let's just see what happens
+// whoops sorry I guess
 unsafe impl Send for Motor {}
+
 pub(crate) struct Motor {
     pwm: MotorChannel,
 }

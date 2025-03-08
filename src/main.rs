@@ -36,6 +36,7 @@ struct TopState {
     periodic_timer: PeriodicTimer<'static, Blocking>,
 }
 
+static TOP_STATE: Mutex<RefCell<Option<TopState>>> = Mutex::new(RefCell::new(None));
 
 static MPU_6050: Mutex<RefCell<Option<Mpu6050<'static, Blocking>>>> = Mutex::new(RefCell::new(None));
 static MOTOR_DRIVE: Mutex<RefCell<Option<MotorDrive>>> = Mutex::new(RefCell::new(None));
@@ -44,16 +45,12 @@ static TIMER: Mutex<RefCell<Option<PeriodicTimer<'static, Blocking>>>> = Mutex::
 #[handler]
 fn timed_interrupt_handler() {
     critical_section::with(|cs| {
-        let mut mpu_borrow = MPU_6050.borrow_ref_mut(cs);
-        let mpu_ref = mpu_borrow
-            .as_mut()
-            .unwrap();
+        let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
+        let top_state = top_state_borrow.as_mut().unwrap();
+        let mpu_ref = &mut top_state.mpu;
         let motion_data = mpu_ref.read_motion_data();
         motion_data.show();
-        TIMER.borrow_ref_mut(cs)
-            .as_mut()
-            .unwrap()
-            .clear_interrupt();
+        top_state.periodic_timer.clear_interrupt();
     });
 }
 
@@ -116,7 +113,7 @@ fn main() -> ! {
     let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO5);
     pwm3.configure(common_chanconfig).unwrap();
 
-    let mut motor_drive = MotorDrive::new(pwm0, pwm1, pwm2, pwm3);
+    let motor_drive = MotorDrive::new(pwm0, pwm1, pwm2, pwm3);
     println!("Motor pwms initialized");
 
 
@@ -124,21 +121,23 @@ fn main() -> ! {
     let timg1 = TimerGroup::new(peripherals.TIMG1);
     let mut ptimer = PeriodicTimer::new(timg1.timer0);
     ptimer.set_interrupt_handler(timed_interrupt_handler);
-    ptimer.enable_interrupt(true);
-    ptimer.start(Duration::from_millis(100))
-        .expect("Failed to start periodic timer1");
+
+    let top_state = TopState {
+        mpu,
+        motors: motor_drive,
+        periodic_timer: ptimer,
+    };
+
+    // Initialize program state and start timed interrupt loop
     critical_section::with(|cs| {
-        MPU_6050.borrow_ref_mut(cs).replace(mpu);
-        MOTOR_DRIVE.borrow_ref_mut(cs).replace(motor_drive);
-        TIMER.borrow_ref_mut(cs).replace(ptimer);
+        let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
+        let top_state = top_state_borrow.insert(top_state);
+        top_state.periodic_timer.enable_interrupt(true);
+        top_state.periodic_timer.start(Duration::from_millis(100))
+            .expect("Failed to start periodic timer1");
     });
 
-    
-
     loop {
-    //    read_motion_data(&mut i2c).show();
-        let delay_start = Instant::now();
-        while delay_start.elapsed() < Duration::from_millis(100) {}
     }
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.0.0-beta.0/examples/src/bin
