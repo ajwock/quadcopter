@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [[bin]]
 name = "accel"
-path = "./src/bin/main.rs"
+path = "./src/main.rs"
 
 [dependencies]
 bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
