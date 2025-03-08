@@ -2,6 +2,8 @@
 #![no_main]
 
 mod mpu6050;
+mod mpu6050_async;
+mod new_main;
 
 use mpu6050::Mpu6050;
 use esp_backtrace as _;
@@ -40,8 +42,7 @@ fn timed_interrupt_handler() {
     });
 }
 
-#[main]
-fn main() -> ! {
+fn old_main() -> ! {
     // generator version: 0.3.1
 
     esp_println::logger::init_logger_from_env();
