@@ -28,13 +28,22 @@ use core::cell::RefCell;
 use critical_section::Mutex;
 use esp_hal::handler;
 use static_cell::StaticCell;
+use motion_data::MotionData;
 
 extern crate alloc;
+
+#[derive(Copy, Clone, Debug)]
+enum ExecutionState {
+    Start,
+    Calibrate([MotionData; 16], usize),
+    Fly,
+}
 
 struct TopState {
     mpu: Mpu6050<'static, Blocking>,
     motors: MotorDrive,
     periodic_timer: PeriodicTimer<'static, Blocking>,
+    exe_state: ExecutionState,
 }
 
 static TOP_STATE: Mutex<RefCell<Option<TopState>>> = Mutex::new(RefCell::new(None));
@@ -43,15 +52,37 @@ static MPU_6050: Mutex<RefCell<Option<Mpu6050<'static, Blocking>>>> = Mutex::new
 static MOTOR_DRIVE: Mutex<RefCell<Option<MotorDrive>>> = Mutex::new(RefCell::new(None));
 static TIMER: Mutex<RefCell<Option<PeriodicTimer<'static, Blocking>>>> = Mutex::new(RefCell::new(None));
 
+fn fly(top_state: &mut TopState) {
+    let motion_data = top_state.mpu.read_motion_data();
+    motion_data.show();
+    top_state.motors.attitude_correct(motion_data);
+}
+
 #[handler]
 fn timed_interrupt_handler() {
     critical_section::with(|cs| {
         let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
         let top_state = top_state_borrow.as_mut().unwrap();
-        let mpu_ref = &mut top_state.mpu;
-        let motion_data = mpu_ref.read_motion_data();
-        motion_data.show();
-        top_state.motors.attitude_correct(motion_data);
+        match top_state.exe_state {
+            ExecutionState::Start => {
+                println!("Starting calibration");
+                top_state.exe_state = ExecutionState::Calibrate([MotionData::zero(); 16], 0);
+            },
+            ExecutionState::Calibrate(mut cal_v, index) => {
+                cal_v[index] = top_state.mpu.read_motion_data_raw();
+                if index >= cal_v.len() - 1 {
+                    top_state.mpu.calibrate(cal_v);
+                    println!("calibration_offsets: {:?}", top_state.mpu.calibration_offsets);
+                    top_state.exe_state = ExecutionState::Fly;
+                } else {
+                    top_state.exe_state = ExecutionState::Calibrate(cal_v, index + 1);
+                }
+            },
+            ExecutionState::Fly => {
+                fly(top_state);
+            }
+        }
+
         top_state.periodic_timer.clear_interrupt();
     });
 }
@@ -106,13 +137,13 @@ fn main() -> ! {
         duty_pct: 0,
         pin_config: ledc::channel::config::PinConfig::PushPull,
     };
-    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO2);
+    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO3);
     pwm0.configure(common_chanconfig).unwrap();
-    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO3);
+    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO4);
     pwm1.configure(common_chanconfig).unwrap();
-    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO4);
+    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO5);
     pwm2.configure(common_chanconfig).unwrap();
-    let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO5);
+    let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO6);
     pwm3.configure(common_chanconfig).unwrap();
 
     let motor_drive = MotorDrive::new(pwm0, pwm1, pwm2, pwm3);
@@ -128,6 +159,7 @@ fn main() -> ! {
         mpu,
         motors: motor_drive,
         periodic_timer: ptimer,
+        exe_state: ExecutionState::Start,
     };
 
     // Initialize program state and start timed interrupt loop

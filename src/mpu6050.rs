@@ -9,12 +9,14 @@ pub(crate) const ACCEL_ADDRESS: u8 = 0b1101000;
 
 pub(crate) struct Mpu6050<'a, D: DriverMode> {
     comm: I2c<'a, D>,
+    pub(crate) calibration_offsets: MotionData,
 }
 
 impl<'a, D: DriverMode> Mpu6050<'a, D> {
     pub(crate) fn new(i2c: I2c<'a, D>) -> Self {
         Self {
             comm: i2c,
+            calibration_offsets: MotionData::zero(),
         }
     }
 
@@ -63,7 +65,7 @@ impl<'a, D: DriverMode> Mpu6050<'a, D> {
         self.write_mpu_6050_reg(0x37, 0x02);
     }
 
-    pub(crate) fn read_motion_data(&mut self) -> MotionData {
+    pub(crate) fn read_motion_data_raw(&mut self) -> MotionData {
         let mut regs_out = [0; 14];
         self.burst_read_mpu_6050_regs(59, &mut regs_out);
         let acc_x = i16::from_be_bytes([regs_out[0], regs_out[1]]);
@@ -81,5 +83,36 @@ impl<'a, D: DriverMode> Mpu6050<'a, D> {
             gyr_y,
             gyr_z,
         }
+    }
+
+    pub(crate) fn read_motion_data(&mut self) -> MotionData {
+        self.read_motion_data_raw() + self.calibration_offsets
+    }
+
+    // Calculate the average difference between several measurements and the expected
+    // gravity vector.
+    // The expected gravity vector is defined as the average vector's magnitude,
+    // but only in the z direction with every other element 0.
+    //
+    // Personally I don't think this is quite what I want.  I want the gratvity vector at
+    // calibration time to be treated as 'true down'.  But the present approximation becomes quite
+    // bad if there is a significant bias towards x or y.
+    //
+    // For now, we panic if there is much error.
+    pub fn calibrate(&mut self, calib_data: [MotionData; 16]) {
+        let sum_vector = calib_data.iter().map(|x| x.into_vector().map(|y| y as i32))
+            .fold([0; 6], |acc, v| core::array::from_fn(|i| acc[i] + v[i]));
+        let avg_offsets = sum_vector.map(|x| (x >> 4) as i16);
+        let raw_offsets = MotionData::from_vector(avg_offsets);
+        let magnitude = raw_offsets.acc_magnitude();
+        let mut gravity_vector = MotionData::zero();
+        gravity_vector.acc_z = magnitude;
+        let calib_offsets = gravity_vector - raw_offsets;
+        let calib_acc_magnitude = calib_offsets.acc_magnitude();
+        if calib_acc_magnitude > 1000 {
+            panic!("Calibration failed- offset magnitude {} > 1000.  Ensure the device is on a level surface", calib_acc_magnitude);
+        }
+        println!("Note: Calibration offset magnitude: {}", calib_acc_magnitude);
+        self.calibration_offsets = calib_offsets;
     }
 }

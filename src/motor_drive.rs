@@ -35,6 +35,7 @@ pub(crate) struct MotorDrive {
     integrated_acc_error: [UnityFixed16; 3],
 }
 
+
 impl MotorDrive {
     pub(crate) fn new(topleft: MotorChannel, topright: MotorChannel, bottomleft: MotorChannel, bottomright: MotorChannel) -> Self {
         Self {
@@ -48,15 +49,26 @@ impl MotorDrive {
 
     pub(crate) fn attitude_correct(&mut self, data: MotionData) {
         let fdata: FixedMotionData = data.into();
+
+        // Handle acceleration adjustments
         let acc_v = fdata.normalized_acc();
         let err_v: [_; 3] = core::array::from_fn(|i| self.target_acc_vector[i] - acc_v[i]);
         println!("acc_v: {:?}", acc_v);
         println!("err_v: {:?}", err_v);
+        let mut motor_adjustments = [[UnityFixed16::from_num(0); 2]; 2];
+        motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(err_v[0]).saturating_add(err_v[1]);
+        motor_adjustments[0][1] = motor_adjustments[0][1].saturating_add(err_v[0]).saturating_sub(err_v[1]);
+        motor_adjustments[1][0] = motor_adjustments[1][0].saturating_sub(err_v[0]).saturating_add(err_v[1]);
+        motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(err_v[0]).saturating_sub(err_v[1]);
+
+
+        
         let mut scalers = [[UnityFixed16::from_bits(self.collective_power as i16); 2]; 2];
-        scalers[0][0] = scalers[0][0].saturating_add(err_v[0]).saturating_add(err_v[1]).max(UnityFixed16::ZERO);
-        scalers[0][1] = scalers[0][1].saturating_add(err_v[0]).saturating_sub(err_v[1]).max(UnityFixed16::ZERO);
-        scalers[1][0] = scalers[1][0].saturating_sub(err_v[0]).saturating_add(err_v[1]).max(UnityFixed16::ZERO);
-        scalers[1][1] = scalers[1][1].saturating_sub(err_v[0]).saturating_sub(err_v[1]).max(UnityFixed16::ZERO);
+        for i in 0..scalers[0].len() {
+            for j in 0..scalers[0].len() {
+                scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).max(UnityFixed16::ZERO);
+            }
+        }
         println!("scalers: {:?}", scalers);
         for i in 0..scalers[0].len() {
             for j in 0..scalers[1].len() {
