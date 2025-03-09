@@ -2,6 +2,7 @@ use esp_hal::i2c::master::{I2c, Operation};
 use esp_hal::DriverMode;
 use alloc::format;
 use esp_println::println;
+use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16};
 
 // 7 bit address of the accelerometer
 pub(crate) const ACCEL_ADDRESS: u8 = 0b1101000;
@@ -82,22 +83,3 @@ impl<'a, D: DriverMode> Mpu6050<'a, D> {
         }
     }
 }
-
-
-
-pub(crate) struct MotionData {
-    acc_x: i16,
-    acc_y: i16,
-    acc_z: i16,
-    gyr_x: i16,
-    gyr_y: i16,
-    gyr_z: i16,
-}
-
-impl MotionData {
-    pub(crate) fn show(&self) {
-        println!("Acceleration: {{ x: {}, y: {}, z: {} }}, Gyro: {{ x: {}, y: {}, z: {} }}", self.acc_x, self.acc_y, self.acc_z, self.gyr_x, self.gyr_y, self.gyr_z);
-    }
-}
-
-

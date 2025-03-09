@@ -8,6 +8,7 @@ name = "accel"
 path = "./src/main.rs"
 
 [dependencies]
+az = "1.2.1"
 bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
   "async",
   "macros",
@@ -38,6 +39,7 @@ esp-wifi = { version = "0.13.0", features = [
   "log",
   "wifi",
 ] }
+fixed = "1.29.0"
 heapless = { version = "0.8.0", default-features = false }
 log = { version = "0.4.21" }
 smoltcp = { version = "0.12.0", default-features = false, features = [

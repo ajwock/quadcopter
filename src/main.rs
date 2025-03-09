@@ -3,6 +3,7 @@
 
 mod mpu6050;
 mod motor_drive;
+mod motion_data;
 
 use motor_drive::MotorDrive;
 use mpu6050::Mpu6050;
@@ -50,6 +51,7 @@ fn timed_interrupt_handler() {
         let mpu_ref = &mut top_state.mpu;
         let motion_data = mpu_ref.read_motion_data();
         motion_data.show();
+        top_state.motors.attitude_correct(motion_data);
         top_state.periodic_timer.clear_interrupt();
     });
 }
@@ -76,7 +78,7 @@ fn main() -> ! {
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
-            .with_frequency(Rate::from_khz(100)),
+            .with_frequency(Rate::from_khz(400)),
     )
     .unwrap()
     .with_sda(peripherals.GPIO0)
