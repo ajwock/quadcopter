@@ -1,4 +1,4 @@
-use fixed::FixedI16;
+use fixed::{FixedI16, FixedI32};
 use esp_println::println;
 use core::ops::{Add, Sub, Mul, Div, Shl, Shr};
 use fixed::types::extra::{U8, U15, U13};
@@ -32,7 +32,7 @@ pub(crate) struct FixedMotionData {
     pub gyr_y: UnityFixed16,
     pub gyr_z: UnityFixed16,
 }
-
+/*
 fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] {
     let up_v = v.map(|x| Cast::<FixedI16<U13>>::cast(x));
     let max = up_v.iter().map(|x| x.abs()).max().unwrap();
@@ -50,6 +50,25 @@ fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] 
     }
     let inv_sqsum = square_sum.sqrt().recip();
     scaled.map(|x| CheckedCast::<FixedI16<U15>>::checked_cast(x.saturating_mul(inv_sqsum)).unwrap_or(FixedI16::<U15>::from_num(0.9999)))
+}*/
+
+fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] {
+    let up_v = v.map(|x| Cast::<FixedI32<U15>>::cast(x));
+    let max = up_v.iter().map(|x| x.abs()).max().unwrap();
+    // Prevent div by zero
+    if max == 0 {
+        return [FixedI16::<U15>::from_num(0); N];
+    }
+    let max_recip = max.recip();
+    let scaled = up_v.map(|x| x * max_recip);
+    let square_sum = scaled.iter().map(|&x| x * x).sum::<FixedI32<U15>>();
+    // Prevent div by zero again- this wouldn't be possible if we were using real numbers
+    // but these are only represenations.
+    if square_sum == 0 {
+        return [FixedI16::<U15>::from_num(0); N];
+    }
+    let inv_sqsum = square_sum.sqrt().recip();
+    scaled.map(|x| Cast::<FixedI16<U15>>::cast(x * inv_sqsum))
 }
 
 impl FixedMotionData {

@@ -39,7 +39,7 @@ impl MotorDrive {
     pub(crate) fn new(topleft: MotorChannel, topright: MotorChannel, bottomleft: MotorChannel, bottomright: MotorChannel) -> Self {
         Self {
             motors: [[Motor::new(topleft), Motor::new(topright)], [Motor::new(bottomleft), Motor::new(bottomright)]],
-            collective_power: 0,
+            collective_power: 16535,
             target_acc_vector: Default::default(),
             previous_acc_error: Default::default(),
             integrated_acc_error: Default::default(),
@@ -53,10 +53,10 @@ impl MotorDrive {
         println!("acc_v: {:?}", acc_v);
         println!("err_v: {:?}", err_v);
         let mut scalers = [[UnityFixed16::from_bits(self.collective_power as i16); 2]; 2];
-        scalers[0][0] = scalers[0][0].saturating_sub(err_v[0]).saturating_sub(err_v[1]).max(UnityFixed16::ZERO);
-        scalers[0][1] = scalers[0][1].saturating_sub(err_v[0]).saturating_add(err_v[1]).max(UnityFixed16::ZERO);
-        scalers[1][0] = scalers[1][0].saturating_add(err_v[0]).saturating_sub(err_v[1]).max(UnityFixed16::ZERO);
-        scalers[1][1] = scalers[1][1].saturating_add(err_v[0]).saturating_add(err_v[1]).max(UnityFixed16::ZERO);
+        scalers[0][0] = scalers[0][0].saturating_add(err_v[0]).saturating_add(err_v[1]).max(UnityFixed16::ZERO);
+        scalers[0][1] = scalers[0][1].saturating_add(err_v[0]).saturating_sub(err_v[1]).max(UnityFixed16::ZERO);
+        scalers[1][0] = scalers[1][0].saturating_sub(err_v[0]).saturating_add(err_v[1]).max(UnityFixed16::ZERO);
+        scalers[1][1] = scalers[1][1].saturating_sub(err_v[0]).saturating_sub(err_v[1]).max(UnityFixed16::ZERO);
         println!("scalers: {:?}", scalers);
         for i in 0..scalers[0].len() {
             for j in 0..scalers[1].len() {
