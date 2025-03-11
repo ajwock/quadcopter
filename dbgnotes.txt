@@ -1,0 +1,11 @@
+esp_hal i2c/master/mod.rs:2460 : driver.write()
+:2350, await appears to yield
+:1893, wait_for_completion
+
+# Eventually embassy puts the processor to sleep with 'wfi' which causes the processor to do nothing until an interrupt is received.
+# It appears that embassy only checks whatever interrupted, so we never check back to see if the i2c comm completed.
+
+During .into_async(), we call 'enable_listen' eventually.
+We set all of the interrupts in that set to false.
+
+/home/dzdt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-hal-1.0.0-beta.0/src/i2c/master/mod.rs:1289

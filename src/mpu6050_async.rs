@@ -1,19 +1,21 @@
 use esp_hal::Async;
 use alloc::format;
 use esp_println::println;
-use embedded_hal_async::i2c::{I2c, Operation};
 use embassy_time::{Timer, Duration};
+use esp_hal::i2c::{
+    master::{I2c, Operation},
+};
 
 // 7 bit address of the accelerometer
 pub(crate) const ACCEL_ADDRESS: u8 = 0b1101000;
 
 #[derive(Debug)]
-pub(crate) struct Mpu6050<I: I2c> {
-    comm: I,
+pub(crate) struct Mpu6050 {
+    comm: I2c<'static, Async>,
 }
 
-impl<I: I2c> Mpu6050<I> {
-    pub(crate) fn new(i2c: I) -> Self {
+impl Mpu6050 {
+    pub(crate) fn new(i2c: I2c<'static, Async>) -> Self {
         Self {
             comm: i2c,
         }
@@ -21,14 +23,14 @@ impl<I: I2c> Mpu6050<I> {
 
     pub(crate) async fn write_mpu_6050_reg(&mut self, reg_address: u8, val: u8) {
         println!("Running transction");
-        self.comm.write(ACCEL_ADDRESS, &[reg_address, val])
+        self.comm.write_async(ACCEL_ADDRESS, &[reg_address, val])
             .await
             .expect(format!("Failed to write val {} to register {} on mpu_6050", val, reg_address).as_str());
         println!("Finished transaction");
     }
 
     pub(crate) async fn burst_write_mpu_6050_regs(&mut self, start_address: u8, reg_vals: &[u8]) {
-        self.comm.transaction(ACCEL_ADDRESS, &mut [Operation::Write(&[start_address]), Operation::Write(reg_vals)])
+        self.comm.transaction_async(ACCEL_ADDRESS, &mut [Operation::Write(&[start_address]), Operation::Write(reg_vals)])
             .await
             .expect(format!("Failed to burst write vals {:?} to registers starting at {}", reg_vals, start_address).as_str());
     }
@@ -36,14 +38,14 @@ impl<I: I2c> Mpu6050<I> {
     // Registers have an 8-bit address
     pub(crate) async fn read_mpu_6050_reg(&mut self, reg_address: u8) -> u8 {
         let mut datum = 0;
-        self.comm.write_read(ACCEL_ADDRESS, &[reg_address], core::slice::from_mut(&mut datum))
+        self.comm.write_read_async(ACCEL_ADDRESS, &[reg_address], core::slice::from_mut(&mut datum))
             .await
             .expect(format!("Failed to read register {} from mpu_6050", reg_address).as_str());
         datum
     }
 
     pub(crate) async fn burst_read_mpu_6050_regs(&mut self, start_address: u8, regs_out: &mut [u8]) {
-        self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
+        self.comm.write_read_async(ACCEL_ADDRESS, &[start_address], regs_out)
             .await
             .expect(format!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address).as_str());
     }

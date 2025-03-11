@@ -1,5 +1,6 @@
 [target.riscv32imc-unknown-none-elf]
 runner = "espflash flash --monitor --chip esp32c3"
+#runner = "probe-rs run --chip esp32c3"
 
 [env]
 ESP_LOG="info"

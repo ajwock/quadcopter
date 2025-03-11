@@ -22,13 +22,14 @@ use esp_hal::{
 use core::cell::RefCell;
 use static_cell::StaticCell;
 use no_std_strings::str64;
+use enumset::EnumSet;
 
 type ChannelMutex = NoopRawMutex;
 
-type MotionResult = Result<(Mpu6050<I2c<'static, Async>>, MotionData), (Mpu6050<I2c<'static, Async>>, str64)>;
+type MotionResult = Result<(Mpu6050, MotionData), (Mpu6050, str64)>;
 
 #[embassy_executor::task]
-async fn read_motion_data(mut mpu: Mpu6050<I2c<'static, Async>>, tx: Sender<'static, ChannelMutex, MotionResult, 1>) {
+async fn read_motion_data(mut mpu: Mpu6050, tx: Sender<'static, ChannelMutex, MotionResult, 1>) {
     let data = mpu.read_motion_data().await;
     tx.send(Ok((mpu, data))).await;
 }
