@@ -47,6 +47,16 @@ impl MotorDrive {
         }
     }
 
+    pub(crate) fn set_collective_pct(&mut self, pct: u8) {
+        const MAX_INPUT: u32 = 100;
+        const MAX_OUTPUT: u32 = i16::MAX as u32;
+        const RATIO: u32 = MAX_OUTPUT / MAX_INPUT;
+        let pct_clamped = core::cmp::min(pct, 100);
+        let power_val = pct_clamped as u32 * RATIO;
+        self.collective_power = power_val as u16;
+        println!("Setting collective: {}", self.collective_power);
+    }
+
     pub(crate) fn attitude_correct(&mut self, data: MotionData) {
         let fdata: FixedMotionData = data.into();
 

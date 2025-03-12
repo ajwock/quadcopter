@@ -23,12 +23,21 @@ use esp_hal::ledc::{
     timer::TimerIFace,
     channel::ChannelIFace,
 };
-
+use esp_hal::uart;
+use esp_hal::uart::{
+    Uart,
+    UartInterrupt,
+    DataBits,
+    Parity,
+    AtCmdConfig,
+};
+use core::sync::atomic::{Ordering, AtomicU8};
 use core::cell::RefCell;
 use critical_section::Mutex;
 use esp_hal::handler;
 use static_cell::StaticCell;
 use motion_data::MotionData;
+use enumset::EnumSet;
 
 extern crate alloc;
 
@@ -46,15 +55,14 @@ struct TopState {
     exe_state: ExecutionState,
 }
 
-static TOP_STATE: Mutex<RefCell<Option<TopState>>> = Mutex::new(RefCell::new(None));
+static COLLECTIVE: AtomicU8 = AtomicU8::new(0);
 
-static MPU_6050: Mutex<RefCell<Option<Mpu6050<'static, Blocking>>>> = Mutex::new(RefCell::new(None));
-static MOTOR_DRIVE: Mutex<RefCell<Option<MotorDrive>>> = Mutex::new(RefCell::new(None));
-static TIMER: Mutex<RefCell<Option<PeriodicTimer<'static, Blocking>>>> = Mutex::new(RefCell::new(None));
+static TOP_STATE: Mutex<RefCell<Option<TopState>>> = Mutex::new(RefCell::new(None));
 
 fn fly(top_state: &mut TopState) {
     let motion_data = top_state.mpu.read_motion_data();
     motion_data.show();
+    top_state.motors.set_collective_pct(COLLECTIVE.load(Ordering::Relaxed));
     top_state.motors.attitude_correct(motion_data);
 }
 
@@ -87,6 +95,79 @@ fn timed_interrupt_handler() {
     });
 }
 
+struct CtrlState {
+    uart: Uart<'static, Blocking>,
+    packet_state: UartPacketState,
+}
+
+const FIRST_MAGIC: u8 = 0x6e;
+const SECOND_MAGIC: u8 = 0x2b;
+
+#[derive(Copy, Clone, Debug)]
+enum UartPacketState {
+    Start,
+    FirstMagic,
+    SecondMagic,
+    CollectivePower(u8),
+//    Checksum(u8),
+}
+
+// Try to provide more noise resistance...
+fn xorsum(power: u8, sum: u8) -> bool {
+    let msg = [FIRST_MAGIC, SECOND_MAGIC, power];
+    let mut s = 1;
+    for byte in msg {
+        s ^= byte;
+        s ^= s << 5;
+        s ^= s >> 3;
+    }
+    if s == 255 {
+        s -= 1;
+    }
+    s == sum
+}
+
+fn uart_packet_state_machine(byte: u8, state: UartPacketState) -> UartPacketState {
+    match (state, byte) {
+        (UartPacketState::Start, FIRST_MAGIC) => UartPacketState::FirstMagic,
+        (UartPacketState::FirstMagic, SECOND_MAGIC) => UartPacketState::SecondMagic,
+        (UartPacketState::SecondMagic, p) if p <= 100 => UartPacketState::CollectivePower(p),
+        (UartPacketState::CollectivePower(p), sum) => {
+            if xorsum(p, sum) {
+                println!("Stored_collective: {}", p);
+                COLLECTIVE.store(p, Ordering::Relaxed);
+            }
+            UartPacketState::Start
+        }
+        // Connection is noisy, just look for the start again on error
+        _ => UartPacketState::Start,
+    }
+}
+
+static CONTROL_STATE: Mutex<RefCell<Option<CtrlState>>> = Mutex::new(RefCell::new(None));
+#[handler]
+fn uart_recv_handler() {
+    println!("uart_recv called");
+    critical_section::with(|cs| {
+        let mut control_state_borrow = CONTROL_STATE.borrow_ref_mut(cs);
+        let control_state = control_state_borrow.as_mut().unwrap();
+        let mut buf = [0; 32];
+        match control_state.uart.read_buffered(&mut buf) {
+            Ok(bytes_read) => {
+                let initted_buf = &buf[0..bytes_read];
+                println!("uart_recv: {:x?}", initted_buf);
+                for &byte in initted_buf {
+                    control_state.packet_state = uart_packet_state_machine(byte, control_state.packet_state);
+                }
+            }
+            Err(_) => {
+                // Just reset the machine on error
+                control_state.packet_state = UartPacketState::Start;
+            }
+        }
+    });
+}
+
 #[main]
 fn main() -> ! {
     // generator version: 0.3.1
@@ -106,14 +187,26 @@ fn main() -> ! {
     )
     .unwrap();
 
+    let mut uart = Uart::new(peripherals.UART1,
+        uart::Config::default()
+            .with_baudrate(3600)
+            .with_data_bits(DataBits::_8)
+            .with_parity(Parity::Odd)
+    )
+    .unwrap()
+    .with_rx(peripherals.GPIO8);
+    uart.set_at_cmd(AtCmdConfig::default()
+        .with_cmd_char(255));
+    uart.set_interrupt_handler(uart_recv_handler);
+
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
             .with_frequency(Rate::from_khz(400)),
     )
     .unwrap()
-    .with_sda(peripherals.GPIO0)
-    .with_scl(peripherals.GPIO1);
+    .with_sda(peripherals.GPIO1)
+    .with_scl(peripherals.GPIO0);
 
     let mut mpu = Mpu6050::new(i2c);
 
@@ -137,11 +230,11 @@ fn main() -> ! {
         duty_pct: 0,
         pin_config: ledc::channel::config::PinConfig::PushPull,
     };
-    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO3);
+    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO2);
     pwm0.configure(common_chanconfig).unwrap();
-    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO4);
+    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO3);
     pwm1.configure(common_chanconfig).unwrap();
-    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO5);
+    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO4);
     pwm2.configure(common_chanconfig).unwrap();
     let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO6);
     pwm3.configure(common_chanconfig).unwrap();
@@ -162,13 +255,23 @@ fn main() -> ! {
         exe_state: ExecutionState::Start,
     };
 
+    let ctrl_state = CtrlState {
+        uart,
+        packet_state: UartPacketState::Start,
+    };
+
     // Initialize program state and start timed interrupt loop
     critical_section::with(|cs| {
         let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
         let top_state = top_state_borrow.insert(top_state);
+        let mut ctrl_state_borrow = CONTROL_STATE.borrow_ref_mut(cs);
+        let control_state = ctrl_state_borrow.insert(ctrl_state);
         top_state.periodic_timer.enable_interrupt(true);
         top_state.periodic_timer.start(Duration::from_millis(100))
             .expect("Failed to start periodic timer1");
+        let mut es = EnumSet::new();
+        es.insert(UartInterrupt::AtCmd);
+        control_state.uart.listen(es);
     });
 
     loop {

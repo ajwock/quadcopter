@@ -14,13 +14,17 @@ bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5
   "macros",
 ] }
 critical-section = "1.2.0"
+embassy-executor = "0.7.0"
 embassy-net = { version = "0.6.0", features = [
   "dhcpv4",
   "medium-ethernet",
   "tcp",
   "udp",
 ] }
+embassy-sync = "0.6.2"
+embassy-time = "0.4.0"
 embedded-io = "0.6.1"
+enumset = "1.1.5"
 esp-alloc = "0.7.0"
 esp-backtrace = { version = "0.15.1", features = [
   "esp32c3",
