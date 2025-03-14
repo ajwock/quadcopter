@@ -23,14 +23,6 @@ use esp_hal::ledc::{
     timer::TimerIFace,
     channel::ChannelIFace,
 };
-use esp_hal::uart;
-use esp_hal::uart::{
-    Uart,
-    UartInterrupt,
-    DataBits,
-    Parity,
-    AtCmdConfig,
-};
 use core::sync::atomic::{Ordering, AtomicU8};
 use core::cell::RefCell;
 use critical_section::Mutex;
@@ -53,8 +45,6 @@ struct TopState {
     motors: MotorDrive,
     periodic_timer: PeriodicTimer<'static, Blocking>,
     exe_state: ExecutionState,
-    uart: Uart<'static, Blocking>,
-    packet_state: UartPacketState,
 }
 
 static COLLECTIVE: AtomicU8 = AtomicU8::new(0);
@@ -68,29 +58,11 @@ fn fly(top_state: &mut TopState) {
     top_state.motors.attitude_correct(motion_data);
 }
 
-fn read_control_comms(top_state: &mut TopState) {
-    let mut buf = [0; 32];
-      match top_state.uart.read_buffered(&mut buf) {
-        Ok(bytes_read) => {
-            let initted_buf = &buf[0..bytes_read];
-            println!("uart_recv: {:x?}", initted_buf);
-            for &byte in initted_buf {
-                top_state.packet_state = uart_packet_state_machine(byte, top_state.packet_state);
-            }
-        }
-        Err(_) => {
-            // Just reset the machine on error
-            top_state.packet_state = UartPacketState::Start;
-        }
-    }
-}
-
 #[handler]
 fn timed_interrupt_handler() {
     critical_section::with(|cs| {
         let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
         let top_state = top_state_borrow.as_mut().unwrap();
-        read_control_comms(top_state);
         match top_state.exe_state {
             ExecutionState::Start => {
                 println!("Starting calibration");
@@ -118,47 +90,6 @@ fn timed_interrupt_handler() {
 const FIRST_MAGIC: u8 = 0x6e;
 const SECOND_MAGIC: u8 = 0x2b;
 
-#[derive(Copy, Clone, Debug)]
-enum UartPacketState {
-    Start,
-    FirstMagic,
-    SecondMagic,
-    CollectivePower(u8),
-//    Checksum(u8),
-}
-
-// Try to provide more noise resistance...
-fn xorsum(power: u8, sum: u8) -> bool {
-    let msg = [FIRST_MAGIC, SECOND_MAGIC, power];
-    let mut s = 1;
-    for byte in msg {
-        s ^= byte;
-        s ^= s << 5;
-        s ^= s >> 3;
-    }
-    if s == 255 {
-        s -= 1;
-    }
-    s == sum
-}
-
-fn uart_packet_state_machine(byte: u8, state: UartPacketState) -> UartPacketState {
-    match (state, byte) {
-        (UartPacketState::Start, FIRST_MAGIC) => UartPacketState::FirstMagic,
-        (UartPacketState::FirstMagic, SECOND_MAGIC) => UartPacketState::SecondMagic,
-        (UartPacketState::SecondMagic, p) if p <= 100 => UartPacketState::CollectivePower(p),
-        (UartPacketState::CollectivePower(p), sum) => {
-            if xorsum(p, sum) {
-                println!("Stored_collective: {}", p);
-                COLLECTIVE.store(p, Ordering::Relaxed);
-            }
-            UartPacketState::Start
-        }
-        // Connection is noisy, just look for the start again on error
-        _ => UartPacketState::Start,
-    }
-}
-
 #[main]
 fn main() -> ! {
     // generator version: 0.3.1
@@ -177,15 +108,6 @@ fn main() -> ! {
         peripherals.RADIO_CLK,
     )
     .unwrap();
-
-    let uart = Uart::new(peripherals.UART1,
-        uart::Config::default()
-            .with_baudrate(2500)
-            .with_data_bits(DataBits::_8)
-            .with_parity(Parity::Odd)
-    )
-    .unwrap()
-    .with_rx(peripherals.GPIO8);
 
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
@@ -241,8 +163,6 @@ fn main() -> ! {
         motors: motor_drive,
         periodic_timer: ptimer,
         exe_state: ExecutionState::Start,
-        uart,
-        packet_state: UartPacketState::Start,
     };
 
     // Initialize program state and start timed interrupt loop
