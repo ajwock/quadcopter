@@ -37,7 +37,7 @@ extern crate alloc;
 enum ExecutionState {
     Start,
     Calibrate([MotionData; 16], usize),
-    Fly,
+    Fly(u16),
 }
 
 struct TopState {
@@ -51,10 +51,17 @@ static COLLECTIVE: AtomicU8 = AtomicU8::new(0);
 
 static TOP_STATE: Mutex<RefCell<Option<TopState>>> = Mutex::new(RefCell::new(None));
 
-fn fly(top_state: &mut TopState) {
+fn fly(top_state: &mut TopState, tick: u16) {
     let motion_data = top_state.mpu.read_motion_data();
     motion_data.show();
     top_state.motors.set_collective_pct(COLLECTIVE.load(Ordering::Relaxed));
+    let tickpwr = tick / 10;
+    let pwr = if tick > 1000 {
+        100 - tickpwr
+    } else {
+        tickpwr
+    } as u8;
+    top_state.motors.set_collective_pct(pwr);
     top_state.motors.attitude_correct(motion_data);
 }
 
@@ -73,13 +80,14 @@ fn timed_interrupt_handler() {
                 if index >= cal_v.len() - 1 {
                     top_state.mpu.calibrate(cal_v);
                     println!("calibration_offsets: {:?}", top_state.mpu.calibration_offsets);
-                    top_state.exe_state = ExecutionState::Fly;
+                    top_state.exe_state = ExecutionState::Fly(0);
                 } else {
                     top_state.exe_state = ExecutionState::Calibrate(cal_v, index + 1);
                 }
             },
-            ExecutionState::Fly => {
-                fly(top_state);
+            ExecutionState::Fly(tick) => {
+                fly(top_state, tick);
+                top_state.exe_state = ExecutionState::Fly(tick + 1);
             }
         }
 
@@ -115,8 +123,8 @@ fn main() -> ! {
             .with_frequency(Rate::from_khz(400)),
     )
     .unwrap()
-    .with_sda(peripherals.GPIO1)
-    .with_scl(peripherals.GPIO0);
+    .with_sda(peripherals.GPIO7)
+    .with_scl(peripherals.GPIO8);
 
     let mut mpu = Mpu6050::new(i2c);
 
@@ -140,13 +148,13 @@ fn main() -> ! {
         duty_pct: 0,
         pin_config: ledc::channel::config::PinConfig::PushPull,
     };
-    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO2);
+    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO1);
     pwm0.configure(common_chanconfig).unwrap();
-    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO3);
+    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO2);
     pwm1.configure(common_chanconfig).unwrap();
-    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO4);
+    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO0);
     pwm2.configure(common_chanconfig).unwrap();
-    let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO6);
+    let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO3);
     pwm3.configure(common_chanconfig).unwrap();
 
     let motor_drive = MotorDrive::new(pwm0, pwm1, pwm2, pwm3);

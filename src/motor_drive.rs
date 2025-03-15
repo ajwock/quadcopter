@@ -63,8 +63,8 @@ impl MotorDrive {
         // Handle acceleration adjustments
         let acc_v = fdata.normalized_acc();
         let err_v: [_; 3] = core::array::from_fn(|i| self.target_acc_vector[i] - acc_v[i]);
-        println!("acc_v: {:?}", acc_v);
-        println!("err_v: {:?}", err_v);
+        //println!("acc_v: {:?}", acc_v);
+        //println!("err_v: {:?}", err_v);
         let mut motor_adjustments = [[UnityFixed16::from_num(0); 2]; 2];
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(err_v[0]).saturating_add(err_v[1]);
         motor_adjustments[0][1] = motor_adjustments[0][1].saturating_add(err_v[0]).saturating_sub(err_v[1]);
@@ -72,14 +72,16 @@ impl MotorDrive {
         motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(err_v[0]).saturating_sub(err_v[1]);
 
 
-        
+        if motor_adjustments.iter().flatten().any(|&x| Cast::<i8>::cast(Cast::<FixedI16<U8>>::cast(x)).abs() > 40) {
+            panic!("Craft flipped lol");
+        }
         let mut scalers = [[UnityFixed16::from_bits(self.collective_power as i16); 2]; 2];
         for i in 0..scalers[0].len() {
             for j in 0..scalers[0].len() {
                 scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).max(UnityFixed16::ZERO);
             }
         }
-        println!("scalers: {:?}", scalers);
+       println!("scalers: {:?}", scalers);
         for i in 0..scalers[0].len() {
             for j in 0..scalers[1].len() {
                 let s_cast = Cast::<FixedI16<U8>>::cast(scalers[i][j]);
