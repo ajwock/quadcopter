@@ -5,17 +5,17 @@
       "Application": "Pcbnew",
       "Version": "6.0.11+dfsg-1"
     },
-    "CreationDate": "2025-03-14T20:35:24-04:00"
+    "CreationDate": "2025-03-15T00:22:14-04:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
-      "Name": "quadcopter",
-      "GUID": "71756164-636f-4707-9465-722e6b696361",
+      "Name": "quadcopter_boostbuck_small",
+      "GUID": "71756164-636f-4707-9465-725f626f6f73",
       "Revision": "rev?"
     },
     "Size": {
-      "X": 33.12,
-      "Y": 83.285
+      "X": 25.5,
+      "Y": 10.26
     },
     "LayerNumber": 2,
     "BoardThickness": 1.6,
@@ -24,9 +24,9 @@
   "DesignRules": [
     {
       "Layers": "Outer",
-      "PadToPad": 0.17,
-      "PadToTrack": 0.17,
-      "TrackToTrack": 0.17,
+      "PadToPad": 0.1,
+      "PadToTrack": 0.1,
+      "TrackToTrack": 0.1,
       "MinLineWidth": 0.25,
       "TrackToRegion": 0.508,
       "RegionToRegion": 0.508
@@ -34,47 +34,47 @@
   ],
   "FilesAttributes": [
     {
-      "Path": "quadcopter-F_Cu.gbr",
+      "Path": "quadcopter_boostbuck_small-F_Cu.gbr",
       "FileFunction": "Copper,L1,Top",
       "FilePolarity": "Positive"
     },
     {
-      "Path": "quadcopter-B_Cu.gbr",
+      "Path": "quadcopter_boostbuck_small-B_Cu.gbr",
       "FileFunction": "Copper,L2,Bot",
       "FilePolarity": "Positive"
     },
     {
-      "Path": "quadcopter-F_Paste.gbr",
+      "Path": "quadcopter_boostbuck_small-F_Paste.gbr",
       "FileFunction": "SolderPaste,Top",
       "FilePolarity": "Positive"
     },
     {
-      "Path": "quadcopter-B_Paste.gbr",
+      "Path": "quadcopter_boostbuck_small-B_Paste.gbr",
       "FileFunction": "SolderPaste,Bot",
       "FilePolarity": "Positive"
     },
     {
-      "Path": "quadcopter-F_Silkscreen.gbr",
+      "Path": "quadcopter_boostbuck_small-F_Silkscreen.gbr",
       "FileFunction": "Legend,Top",
       "FilePolarity": "Positive"
     },
     {
-      "Path": "quadcopter-B_Silkscreen.gbr",
+      "Path": "quadcopter_boostbuck_small-B_Silkscreen.gbr",
       "FileFunction": "Legend,Bot",
       "FilePolarity": "Positive"
     },
     {
-      "Path": "quadcopter-F_Mask.gbr",
+      "Path": "quadcopter_boostbuck_small-F_Mask.gbr",
       "FileFunction": "SolderMask,Top",
       "FilePolarity": "Negative"
     },
     {
-      "Path": "quadcopter-B_Mask.gbr",
+      "Path": "quadcopter_boostbuck_small-B_Mask.gbr",
       "FileFunction": "SolderMask,Bot",
       "FilePolarity": "Negative"
     },
     {
-      "Path": "quadcopter-Edge_Cuts.gbr",
+      "Path": "quadcopter_boostbuck_small-Edge_Cuts.gbr",
       "FileFunction": "Profile",
       "FilePolarity": "Positive"
     }
