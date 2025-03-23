@@ -1,117 +1,59 @@
 #![no_std]
 #![no_main]
 
-mod mpu6050;
+mod icm42670;
+mod imu_common;
 mod motor_drive;
 mod motion_data;
+mod utils;
 
-use motor_drive::MotorDrive;
-use mpu6050::Mpu6050;
+use esp_println::println;
+use embassy_executor::Spawner;
+use embassy_time::{Duration, Timer, Ticker};
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
-use esp_hal::main;
-use esp_hal::time::{Duration, Instant, Rate};
+use esp_hal::timer::systimer::SystemTimer;
+use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
-use esp_hal::timer::PeriodicTimer;
-use esp_hal::Blocking;
 use esp_hal::i2c;
-use esp_println::println;
-use esp_hal::ledc;
-use esp_hal::ledc::{
-    Ledc,
-    LSGlobalClkSource,
-    timer::TimerIFace,
-    channel::ChannelIFace,
-};
-use core::sync::atomic::{Ordering, AtomicU8};
-use core::cell::RefCell;
-use critical_section::Mutex;
-use esp_hal::handler;
-use static_cell::StaticCell;
+use icm42670::Icm42670;
 use motion_data::MotionData;
-use enumset::EnumSet;
+use embassy_sync::{
+    signal::Signal,
+    blocking_mutex::raw::CriticalSectionRawMutex,
+};
 
 extern crate alloc;
 
-#[derive(Copy, Clone, Debug)]
-enum ExecutionState {
-    Start,
-    Calibrate([MotionData; 16], usize),
-    Fly(u16),
+static IMU_START_READ: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+static IMU_READ_DONE: Signal<CriticalSectionRawMutex, MotionData> = Signal::new();
+
+#[embassy_executor::task]
+async fn imu_read_task(mut imu: Icm42670<'static>) {
+    loop {
+        IMU_START_READ.wait().await;
+        println!("reading motiondata");
+        let motion_data = imu.read_motion_data().await;
+        println!("done");
+        IMU_READ_DONE.signal(motion_data);
+    }
 }
 
-struct TopState {
-    mpu: Mpu6050<'static, Blocking>,
-    motors: MotorDrive,
-    periodic_timer: PeriodicTimer<'static, Blocking>,
-    exe_state: ExecutionState,
-}
-
-static COLLECTIVE: AtomicU8 = AtomicU8::new(0);
-
-static TOP_STATE: Mutex<RefCell<Option<TopState>>> = Mutex::new(RefCell::new(None));
-
-fn fly(top_state: &mut TopState, tick: u16) {
-    let motion_data = top_state.mpu.read_motion_data();
-    motion_data.show();
-    top_state.motors.set_collective_pct(COLLECTIVE.load(Ordering::Relaxed));
-    let tickpwr = tick / 10;
-    let pwr = if tick > 1000 {
-        100 - tickpwr
-    } else {
-        tickpwr
-    } as u8;
-    top_state.motors.set_collective_pct(pwr);
-    top_state.motors.attitude_correct(motion_data);
-}
-
-#[handler]
-fn timed_interrupt_handler() {
-    critical_section::with(|cs| {
-        let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
-        let top_state = top_state_borrow.as_mut().unwrap();
-        match top_state.exe_state {
-            ExecutionState::Start => {
-                println!("Starting calibration");
-                top_state.exe_state = ExecutionState::Calibrate([MotionData::zero(); 16], 0);
-            },
-            ExecutionState::Calibrate(mut cal_v, index) => {
-                cal_v[index] = top_state.mpu.read_motion_data_raw();
-                if index >= cal_v.len() - 1 {
-                    top_state.mpu.calibrate(cal_v);
-                    println!("calibration_offsets: {:?}", top_state.mpu.calibration_offsets);
-                    top_state.exe_state = ExecutionState::Fly(0);
-                } else {
-                    top_state.exe_state = ExecutionState::Calibrate(cal_v, index + 1);
-                }
-            },
-            ExecutionState::Fly(tick) => {
-                fly(top_state, tick);
-                top_state.exe_state = ExecutionState::Fly(tick + 1);
-            }
-        }
-
-        top_state.periodic_timer.clear_interrupt();
-    });
-}
-
-const FIRST_MAGIC: u8 = 0x6e;
-const SECOND_MAGIC: u8 = 0x2b;
-
-#[main]
-fn main() -> ! {
+#[esp_hal_embassy::main]
+async fn main(spawner: Spawner) {
     // generator version: 0.3.1
-
-    esp_println::logger::init_logger_from_env();
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
     esp_alloc::heap_allocator!(size: 72 * 1024);
 
-    let timg0 = TimerGroup::new(peripherals.TIMG0);
+    let timer0 = SystemTimer::new(peripherals.SYSTIMER);
+    esp_hal_embassy::init(timer0.alarm0);
+
+    let timer1 = TimerGroup::new(peripherals.TIMG0);
     let _init = esp_wifi::init(
-        timg0.timer0,
+        timer1.timer0,
         esp_hal::rng::Rng::new(peripherals.RNG),
         peripherals.RADIO_CLK,
     )
@@ -123,66 +65,25 @@ fn main() -> ! {
             .with_frequency(Rate::from_khz(400)),
     )
     .unwrap()
-    .with_sda(peripherals.GPIO7)
-    .with_scl(peripherals.GPIO8);
+    .with_sda(peripherals.GPIO10)
+    .with_scl(peripherals.GPIO8)
+    .into_async();
 
-    let mut mpu = Mpu6050::new(i2c);
+    let mut imu = Icm42670::new(i2c); 
+    imu.configure().await;
 
-    println!("Configuring mpu 6050");
-    mpu.configure_mpu_6050();
-    println!("mpu 6050 configured");
-
-    println!("Initializing motor pwms");
-    let mut ledc = Ledc::new(peripherals.LEDC);
-    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
-    static LSTIMER0: StaticCell<ledc::timer::Timer<'_, ledc::LowSpeed>> = StaticCell::new();
-    let lstimer0 = LSTIMER0.init(ledc.timer::<ledc::LowSpeed>(ledc::timer::Number::Timer0));
-    lstimer0
-    .configure(ledc::timer::config::Config {
-        duty: ledc::timer::config::Duty::Duty5Bit,
-        clock_source: ledc::timer::LSClockSource::APBClk,
-        frequency: Rate::from_khz(24),
-    }).unwrap();
-    let common_chanconfig = ledc::channel::config::Config {
-        timer: lstimer0,
-        duty_pct: 0,
-        pin_config: ledc::channel::config::PinConfig::PushPull,
-    };
-    let mut pwm0 = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO1);
-    pwm0.configure(common_chanconfig).unwrap();
-    let mut pwm1 = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO2);
-    pwm1.configure(common_chanconfig).unwrap();
-    let mut pwm2 = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO0);
-    pwm2.configure(common_chanconfig).unwrap();
-    let mut pwm3 = ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO3);
-    pwm3.configure(common_chanconfig).unwrap();
-
-    let motor_drive = MotorDrive::new(pwm0, pwm1, pwm2, pwm3);
-    println!("Motor pwms initialized");
-
-
-    println!("Initializing periodic timer interrupt");
-    let timg1 = TimerGroup::new(peripherals.TIMG1);
-    let mut ptimer = PeriodicTimer::new(timg1.timer0);
-    ptimer.set_interrupt_handler(timed_interrupt_handler);
-
-    let top_state = TopState {
-        mpu,
-        motors: motor_drive,
-        periodic_timer: ptimer,
-        exe_state: ExecutionState::Start,
-    };
-
-    // Initialize program state and start timed interrupt loop
-    critical_section::with(|cs| {
-        let mut top_state_borrow = TOP_STATE.borrow_ref_mut(cs);
-        let top_state = top_state_borrow.insert(top_state);
-        top_state.periodic_timer.enable_interrupt(true);
-        top_state.periodic_timer.start(Duration::from_millis(100))
-            .expect("Failed to start periodic timer1");
-    });
-
+    // TODO: Spawn some tasks
+    spawner
+        .spawn(imu_read_task(imu)).unwrap();
+    let _ = spawner;
+    let mut ticker = Ticker::every(Duration::from_millis(100));
+    let mut prev_motiondata = MotionData::zero();
     loop {
+        IMU_START_READ.signal(());
+        prev_motiondata.show();
+        let motion_data = IMU_READ_DONE.wait().await;
+        prev_motiondata = motion_data;
+        ticker.next().await;
     }
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.0.0-beta.0/examples/src/bin

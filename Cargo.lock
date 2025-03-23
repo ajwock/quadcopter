@@ -3,31 +3,6 @@
 version = 4
 
 [[package]]
-name = "accel"
-version = "0.1.0"
-dependencies = [
- "az",
- "bleps",
- "critical-section",
- "embassy-executor",
- "embassy-net",
- "embassy-sync",
- "embassy-time",
- "embedded-io",
- "enumset",
- "esp-alloc",
- "esp-backtrace",
- "esp-hal",
- "esp-println",
- "esp-wifi",
- "fixed",
- "heapless",
- "log",
- "smoltcp",
- "static_cell",
-]
-
-[[package]]
 name = "anyhow"
 version = "1.0.97"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -332,6 +307,7 @@ dependencies = [
  "critical-section",
  "document-features",
  "embassy-time-driver",
+ "embassy-time-queue-utils",
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0",
  "embedded-hal-async",
@@ -345,6 +321,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d45f5d833b6d98bd2aab0c2de70b18bfaa10faf661a1578fd8e5dfb15eb7eba"
 dependencies = [
  "document-features",
+]
+
+[[package]]
+name = "embassy-time-queue-utils"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc55c748d16908a65b166d09ce976575fb8852cf60ccd06174092b41064d8f83"
+dependencies = [
+ "embassy-executor",
+ "heapless",
 ]
 
 [[package]]
@@ -559,6 +545,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp-hal-embassy"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b27f41110117a9bf2be385b42535c686b301c8ce3b5ea0a07567e200a63a2239"
+dependencies = [
+ "critical-section",
+ "document-features",
+ "embassy-executor",
+ "embassy-sync",
+ "embassy-time",
+ "embassy-time-driver",
+ "embassy-time-queue-utils",
+ "esp-build",
+ "esp-config",
+ "esp-hal",
+ "esp-hal-procmacros",
+ "esp-metadata",
+ "portable-atomic",
+ "static_cell",
+]
+
+[[package]]
 name = "esp-hal-procmacros"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -766,9 +774,9 @@ checksum = "1d758ba1b47b00caf47f24925c0074ecb20d6dfcffe7f6d53395c0465674841a"
 
 [[package]]
 name = "half"
-version = "2.4.1"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dd08c532ae367adf81c312a4580bc67f1d0fe8bc9c460520283f4c0ff277888"
+checksum = "7db2ff139bba50379da6aa0766b52fdcb62cb5b263009b09ed58ba604e14bbd1"
 dependencies = [
  "cfg-if",
  "crunchy",
@@ -1053,6 +1061,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "quadcopter"
+version = "0.1.0"
+dependencies = [
+ "az",
+ "bleps",
+ "critical-section",
+ "embassy-executor",
+ "embassy-net",
+ "embassy-sync",
+ "embassy-time",
+ "embedded-io",
+ "embedded-io-async",
+ "esp-alloc",
+ "esp-backtrace",
+ "esp-hal",
+ "esp-hal-embassy",
+ "esp-println",
+ "esp-wifi",
+ "fixed",
+ "heapless",
+ "smallvec",
+ "smoltcp",
+ "static_cell",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1154,6 +1188,12 @@ checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
 dependencies = [
  "serde",
 ]
+
+[[package]]
+name = "smallvec"
+version = "1.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fcf8323ef1faaee30a44a340193b1ac6814fd9b7b4e88e9d4519a3e4abe1cfd"
 
 [[package]]
 name = "smoltcp"
