@@ -61,6 +61,11 @@ embassy-sync = "0.6.2"
 fixed = "1.29.0"
 az = "1.2.1"
 smallvec = "1.14.0"
+edge-net = "0.10.1"
+edge-http = "0.5.1"
+edge-dhcp = "0.5.0"
+edge-nal-embassy = "0.5.0"
+edge-nal = "0.5.0"
 
 [profile.dev]
 # Rust debug is too slow.

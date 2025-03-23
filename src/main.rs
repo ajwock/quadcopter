@@ -48,6 +48,7 @@ use esp_wifi::{
     },
     EspWifiController,
 };
+use edge_nal::UdpBind;
 
 use imu_common::{ImuCalibrator, ImuController};
 
