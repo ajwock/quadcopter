@@ -23,13 +23,16 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
 };
 
+
+use imu_common::{ImuCalibrator, ImuController};
+
 extern crate alloc;
 
 static IMU_START_READ: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 static IMU_READ_DONE: Signal<CriticalSectionRawMutex, MotionData> = Signal::new();
 
 #[embassy_executor::task]
-async fn imu_read_task(mut imu: Icm42670<'static>) {
+async fn imu_read_task(mut imu: ImuController<Icm42670<'static>>) {
     loop {
         IMU_START_READ.wait().await;
         println!("reading motiondata");
@@ -71,12 +74,20 @@ async fn main(spawner: Spawner) {
 
     let mut imu = Icm42670::new(i2c); 
     imu.configure().await;
+    let mut calibrator = ImuCalibrator::new(imu);
 
-    // TODO: Spawn some tasks
-    spawner
-        .spawn(imu_read_task(imu)).unwrap();
-    let _ = spawner;
+    // Calibrate the imu using the pre-packaged imu calibrator state machine
     let mut ticker = Ticker::every(Duration::from_millis(100));
+    let imuctl = loop {
+        if let Some(out) = calibrator.calibration_tick().await {
+            break out
+        }
+        ticker.next().await
+    };
+
+    spawner
+        .spawn(imu_read_task(imuctl)).unwrap();
+    let _ = spawner;
     let mut prev_motiondata = MotionData::zero();
     loop {
         IMU_START_READ.signal(());
