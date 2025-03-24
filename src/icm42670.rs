@@ -2,6 +2,7 @@ use esp_hal::i2c::master::{I2c, Operation};
 use esp_hal::Async;
 use alloc::format;
 use esp_println::println;
+use smallvec::SmallVec;
 use crate::motion_data::MotionData;
 use crate::imu_common::Imu;
 
@@ -28,7 +29,10 @@ impl<'a> Icm42670<'a> {
     }
 
     async fn burst_write_regs(&mut self, start_address: u8, reg_vals: &[u8]) {
-        self.comm.transaction_async(ACCEL_ADDRESS, &mut [Operation::Write(&[start_address]), Operation::Write(reg_vals)])
+        let mut to_write = SmallVec::<[u8; 32]>::new();
+        to_write.push(start_address);
+        to_write.extend_from_slice(reg_vals);
+        self.comm.write_async(ACCEL_ADDRESS, to_write.as_slice())
             .await
             .expect(format!("Failed to burst write vals {:?} to registers starting at {}", reg_vals, start_address).as_str());
     }

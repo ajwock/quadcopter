@@ -130,9 +130,10 @@ async fn main(spawner: Spawner) {
         net_seed,
     );
 
-    spawner.spawn(connection(controller)).unwrap();
+    spawner.spawn(manage_ap_connection(controller)).unwrap();
     spawner.spawn(net_task(runner)).unwrap();
     spawner.spawn(run_dhcp(stack, gw_ip_addr_str)).unwrap();
+    spawner.spawn(manage_receiver_connection(stack, gw_ip_addr_str)).unwrap();
 
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
@@ -164,10 +165,46 @@ async fn main(spawner: Spawner) {
     let mut prev_motiondata = MotionData::zero();
     loop {
         IMU_START_READ.signal(());
-        prev_motiondata.show();
+//        prev_motiondata.show();
         let motion_data = IMU_READ_DONE.wait().await;
         prev_motiondata = motion_data;
         ticker.next().await;
+    }
+}
+
+#[embassy_executor::task]
+async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static str) {
+    let mut rx_buffer = [0; 2048];
+    let mut tx_buffer = [0; 2048];
+    let mut sock = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
+    loop {
+        println!("Waiting for connection...");
+        if let Err(e) = sock
+            .accept(IpListenEndpoint {
+                addr: None,
+                port: 4200,
+            })
+                .await {
+            println!("Socket connection error in control loop, continuing: {:?}", e);
+            continue
+        }
+        use embedded_io_async::Write;
+        let mut buf = [0u8; 1024];
+        loop {
+            match sock.read(&mut buf).await {
+                Ok(0) => {
+                    println!("Client connection closed.");
+                    break
+                }
+                Ok(len) => {
+                    println!("Got packet: {:?}", &buf[0..len]);
+                }
+                Err(e) => {
+                    println!("Read error in control loop: {:?}", e);
+                    break
+                }
+            }
+        }
     }
 }
 
@@ -211,9 +248,8 @@ async fn run_dhcp(stack: Stack<'static>, gw_ip_addr: &'static str) {
     }
 }
 
-
 #[embassy_executor::task]
-async fn connection(mut controller: WifiController<'static>) {
+async fn manage_ap_connection(mut controller: WifiController<'static>) {
     println!("start connection task");
     println!("Device capabilities: {:?}", controller.capabilities());
     loop {
