@@ -70,9 +70,7 @@ macro_rules! mk_static {
 async fn imu_read_task(mut imu: ImuController<Icm42670<'static>>) {
     loop {
         IMU_START_READ.wait().await;
-        println!("reading motiondata");
         let motion_data = imu.read_motion_data().await;
-        println!("done");
         IMU_READ_DONE.signal(motion_data);
     }
 }
@@ -165,7 +163,7 @@ async fn main(spawner: Spawner) {
     let mut prev_motiondata = MotionData::zero();
     loop {
         IMU_START_READ.signal(());
-//        prev_motiondata.show();
+        prev_motiondata.show();
         let motion_data = IMU_READ_DONE.wait().await;
         prev_motiondata = motion_data;
         ticker.next().await;
