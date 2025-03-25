@@ -12,6 +12,7 @@ pub(crate) const ACCEL_ADDRESS: u8 = 0b1101000;
 pub(crate) struct Icm42670<'a> {
     comm: I2c<'a, Async>,
     pub(crate) calibration_offsets: MotionData,
+    pub(crate) prev_motion_data: MotionData,
 }
 
 impl<'a> Icm42670<'a> {
@@ -19,6 +20,7 @@ impl<'a> Icm42670<'a> {
         Self {
             comm: i2c,
             calibration_offsets: MotionData::zero(),
+            prev_motion_data: MotionData::zero(),
         }
     }
 
@@ -46,10 +48,13 @@ impl<'a> Icm42670<'a> {
         datum
     }
 
-    async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) {
+    async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
         self.comm.write_read_async(ACCEL_ADDRESS, &[start_address], regs_out)
             .await
-            .expect(format!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address).as_str());
+            .map_err(|_| {
+                println!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address);
+            ()
+        })
     }
 
     pub async fn configure(&mut self) {
@@ -75,15 +80,19 @@ impl<'a> Icm42670<'a> {
 
     pub async fn read_motion_data(&mut self) -> MotionData {
         let mut outbuf = [0; 12];
-        self.burst_read_regs(0x0b, &mut outbuf).await;
-        MotionData {
+        if let Err(_) = self.burst_read_regs(0x0b, &mut outbuf).await {
+            return self.prev_motion_data
+        }
+        let out = MotionData {
             acc_x: i16::from_be_bytes([outbuf[0], outbuf[1]]),
             acc_y: i16::from_be_bytes([outbuf[2], outbuf[3]]),
             acc_z: i16::from_be_bytes([outbuf[4], outbuf[5]]),
             gyr_x: i16::from_be_bytes([outbuf[6], outbuf[7]]),
             gyr_y: i16::from_be_bytes([outbuf[8], outbuf[9]]),
             gyr_z: i16::from_be_bytes([outbuf[10], outbuf[11]]),
-        }
+        };
+        self.prev_motion_data = out;
+        out
     }
 }
 

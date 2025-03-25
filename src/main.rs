@@ -28,15 +28,21 @@ use esp_hal::timer::systimer::SystemTimer;
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::i2c;
+use esp_hal::ledc::{
+    self,
+    Ledc,
+    LSGlobalClkSource,
+    timer::TimerIFace,
+    channel::ChannelIFace,
+};
+use static_cell::StaticCell;
 use icm42670::Icm42670;
 use motion_data::MotionData;
 use embassy_sync::{
     signal::Signal,
     blocking_mutex::raw::CriticalSectionRawMutex,
 };
-use heapless::String;
 use esp_wifi::{
-    init,
     wifi::{
         AccessPointConfiguration,
         AuthMethod,
@@ -48,6 +54,7 @@ use esp_wifi::{
     },
     EspWifiController,
 };
+use motor_drive::MotorDrive;
 use edge_nal::UdpBind;
 
 use imu_common::{ImuCalibrator, ImuController};
@@ -70,17 +77,14 @@ macro_rules! mk_static {
 async fn imu_read_task(mut imu: ImuController<Icm42670<'static>>) {
     loop {
         IMU_START_READ.wait().await;
-        println!("reading motiondata");
         let motion_data = imu.read_motion_data().await;
-        println!("done");
         IMU_READ_DONE.signal(motion_data);
     }
 }
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
-    // generator version: 0.3.1
-
+    /* Hal / Embassy init */
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
 
@@ -90,6 +94,8 @@ async fn main(spawner: Spawner) {
     esp_hal_embassy::init(timer0.alarm0);
 
     let mut rng = esp_hal::rng::Rng::new(peripherals.RNG);
+
+    /* CONTROLLER SETUP */
 
     let timer1 = TimerGroup::new(peripherals.TIMG0);
     let initted = &*mk_static!(EspWifiController<'static>, esp_wifi::init(
@@ -135,6 +141,8 @@ async fn main(spawner: Spawner) {
     spawner.spawn(run_dhcp(stack, gw_ip_addr_str)).unwrap();
     spawner.spawn(manage_receiver_connection(stack, gw_ip_addr_str)).unwrap();
 
+    /* IMU SETUP */
+
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
@@ -150,22 +158,67 @@ async fn main(spawner: Spawner) {
     let mut calibrator = ImuCalibrator::new(imu);
 
     // Tick the calibrator state machine until it's done
-    let mut ticker = Ticker::every(Duration::from_millis(100));
+    let mut ticker = Ticker::every(Duration::from_millis(10));
     let imuctl = loop {
         if let Some(out) = calibrator.calibration_tick().await {
             break out
         }
         ticker.next().await
     };
-    // With the imu configured, put it in a task so it doesn't block
     spawner
         .spawn(imu_read_task(imuctl)).unwrap();
+
+    /* PWM / MOTOR DRIVER SETUP */
+
+    println!("Initializing motor pwms");
+    let mut ledc = Ledc::new(peripherals.LEDC);
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
+    static LSTIMER0: StaticCell<ledc::timer::Timer<'_, ledc::LowSpeed>> = StaticCell::new();
+    let lstimer0 = LSTIMER0.init(ledc.timer::<ledc::LowSpeed>(ledc::timer::Number::Timer0));
+    lstimer0
+    .configure(ledc::timer::config::Config {
+        duty: ledc::timer::config::Duty::Duty5Bit,
+        clock_source: ledc::timer::LSClockSource::APBClk,
+        frequency: Rate::from_khz(24),
+    }).unwrap();
+    let common_chanconfig = ledc::channel::config::Config {
+        timer: lstimer0,
+        duty_pct: 0,
+        pin_config: ledc::channel::config::PinConfig::PushPull,
+    };
+    let mut frontleft = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO0);
+    frontleft.configure(common_chanconfig).unwrap();
+    let mut frontright = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO1);
+    frontright.configure(common_chanconfig).unwrap();
+    let mut backleft = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO2);
+    backleft.configure(common_chanconfig).unwrap();
+    let mut backright= ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO3);
+    backright.configure(common_chanconfig).unwrap();
+    
+    // Whoops, need to software rotate the craft 90 degrees to the left
+    let temp = frontleft;
+    let frontleft = frontright;
+    let frontright = backright;
+    let backright = backleft;
+    let backleft = temp;
+    /*
+    // Whoops, need to software rotate the craft 90 degrees to the right
+    let temp = frontright;
+    let frontright = frontleft;
+    let frontleft = backleft;
+    let backleft = backright;
+    let backright = temp;*/
+    // 1 3
+    // 0 2
+    let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright);
+    println!("Motor driver set up");
 
     let _ = spawner;
     let mut prev_motiondata = MotionData::zero();
     loop {
         IMU_START_READ.signal(());
-//        prev_motiondata.show();
+        prev_motiondata.show();
+        motor_drive.attitude_correct(prev_motiondata);
         let motion_data = IMU_READ_DONE.wait().await;
         prev_motiondata = motion_data;
         ticker.next().await;
