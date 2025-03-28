@@ -71,12 +71,14 @@ fn compute_magnitude<const N: usize>(v: [FixedI16<U15>; N]) -> FixedI16<U15> {
 }
 
 fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] {
+    println!("Normalizing");
     let up_v = v.map(|x| Cast::<FixedI32<U15>>::cast(x));
     let max = up_v.iter().map(|x| x.abs()).max().unwrap();
     // Prevent div by zero
     if max == 0 {
         return [FixedI16::<U15>::from_num(0); N];
     }
+    println!("max recip");
     let max_recip = max.recip();
     let scaled = up_v.map(|x| x * max_recip);
     let square_sum = scaled.iter().map(|&x| x * x).sum::<FixedI32<U15>>();
@@ -85,8 +87,9 @@ fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] 
     if square_sum == 0 {
         return [FixedI16::<U15>::from_num(0); N];
     }
+    println!("inv_sqsum");
     let inv_sqsum = square_sum.sqrt().recip();
-    scaled.map(|x| Cast::<FixedI16<U15>>::cast(x * inv_sqsum))
+    scaled.map(|x| (x * inv_sqsum).saturating_cast())
 }
 
 impl FixedMotionData {
