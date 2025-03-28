@@ -35,6 +35,12 @@ use esp_hal::ledc::{
     timer::TimerIFace,
     channel::ChannelIFace,
 };
+use esp_hal::gpio::{
+    self,
+    Output,
+    Level,
+    OutputConfig,
+};
 use static_cell::StaticCell;
 use icm42670::Icm42670;
 use motion_data::MotionData;
@@ -213,12 +219,31 @@ async fn main(spawner: Spawner) {
     let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright);
     println!("Motor driver set up");
 
+    let mut led = Output::new(
+        peripherals.GPIO7,
+        Level::High,
+        OutputConfig::default(),
+    );
+
     let _ = spawner;
     let mut prev_motiondata = MotionData::zero();
+    let mut collective_pct = 0;
+    let mut collective_tick_reducer = 0;
+    let mut led_tick_reducer = 0;
     loop {
         IMU_START_READ.signal(());
         prev_motiondata.show();
+        if collective_pct < 70 && collective_tick_reducer == 0 {
+            collective_pct += 1;
+        }
+        collective_tick_reducer = (collective_tick_reducer + 1) % 5;
+        if led_tick_reducer == 0 {
+            led.toggle()
+        }
+        led_tick_reducer = (led_tick_reducer + 1) % 30;
+        motor_drive.set_collective_pct(collective_pct);
         motor_drive.attitude_correct(prev_motiondata);
+        motor_drive.motor_tick();
         let motion_data = IMU_READ_DONE.wait().await;
         prev_motiondata = motion_data;
         ticker.next().await;
@@ -301,7 +326,7 @@ async fn run_dhcp(stack: Stack<'static>, gw_ip_addr: &'static str) {
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size=10)]
 async fn manage_ap_connection(mut controller: WifiController<'static>) {
     println!("start connection task");
     println!("Device capabilities: {:?}", controller.capabilities());

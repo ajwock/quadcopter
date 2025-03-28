@@ -49,8 +49,8 @@ impl<'a> Icm42670<'a> {
     }
 
     async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
-        self.comm.write_read_async(ACCEL_ADDRESS, &[start_address], regs_out)
-            .await
+        println!("Blocking read");
+        self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
             .map_err(|_| {
                 println!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address);
             ()
@@ -80,9 +80,11 @@ impl<'a> Icm42670<'a> {
 
     pub async fn read_motion_data(&mut self) -> MotionData {
         let mut outbuf = [0; 12];
+        println!("Reading motion data");
         if let Err(_) = self.burst_read_regs(0x0b, &mut outbuf).await {
             return self.prev_motion_data
         }
+        println!("outputting motion data");
         let out = MotionData {
             acc_x: i16::from_be_bytes([outbuf[0], outbuf[1]]),
             acc_y: i16::from_be_bytes([outbuf[2], outbuf[3]]),
