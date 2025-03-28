@@ -74,21 +74,40 @@ impl MotorDrive {
         println!("Setting collective: {}", self.collective_power);
     }
 
-    const POSITION: UnityFixed16 = UnityFixed16::from_bits(i16::MAX / 8);
+    // PID constants.
+    const ATTITUDE_POSITION: UnityFixed16 = UnityFixed16::from_bits(i16::MAX / 8);
+    const ATTITUDE_INTEGRAL: UnityFixed16 = UnityFixed16::from_bits(i16::MAX / 16);
+
+    const ROTATION_POSITION: UnityFixed16 = UnityFixed16::from_bits(i16::MAX / 2);
     pub(crate) fn attitude_correct(&mut self, data: MotionData) {
         let fdata: FixedMotionData = data.into();
 
         // Handle acceleration adjustments
         let acc_v = fdata.normalized_acc();
         let err_v: [_; 3] = core::array::from_fn(|i| self.target_acc_vector[i] - acc_v[i]);
-        let pos_fn = err_v.map(|x| x * Self::POSITION);
+        let pos_fn = err_v.map(|x| x * Self::ATTITUDE_POSITION);
         //println!("acc_v: {:?}", acc_v);
         //println!("err_v: {:?}", err_v);
         let mut motor_adjustments = [[UnityFixed16::from_num(0); 2]; 2];
+        // Motors get power added if craft is tilting towards either of the 4 rectangular edges
+        // that the motor sits at the corner to.
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(pos_fn[0]).saturating_add(pos_fn[1]);
         motor_adjustments[0][1] = motor_adjustments[0][1].saturating_add(pos_fn[0]).saturating_sub(pos_fn[1]);
         motor_adjustments[1][0] = motor_adjustments[1][0].saturating_sub(pos_fn[0]).saturating_add(pos_fn[1]);
         motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(pos_fn[0]).saturating_sub(pos_fn[1]);
+
+        // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
+        // corrections should handle xy rotation
+        let rotation_error = UnityFixed16::from_bits(data.gyr_z);
+        let rot_fn = rotation_error * Self::ROTATION_POSITION;
+        // Opposite motors have propellers rotating in opposite directions.
+        // The rotation error is added to or subtracted from opposite propellers to create torque
+        // in one direction about the z axis without significantly influencing attitude.
+        motor_adjustments[0][0] = motor_adjustments[0][0].saturating_sub(rot_fn);
+        motor_adjustments[0][1] = motor_adjustments[0][1].saturating_add(rot_fn);
+        motor_adjustments[1][0] = motor_adjustments[1][0].saturating_add(rot_fn);
+        motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(rot_fn);
+
 
         let mut scalers = [[UnityFixed16::from_bits(self.collective_power as i16); 2]; 2];
         for i in 0..scalers[0].len() {

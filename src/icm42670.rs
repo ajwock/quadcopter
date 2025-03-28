@@ -68,8 +68,8 @@ impl<'a> Icm42670<'a> {
         }
         println!("Configuring accelerometer and gyro");
         let configuration_data = &[
-            0b0100_0110, // Gyro ODR selection: 400hz
-            0b0100_0111, // Accel ODR selection: 400hz,
+            0b0000_0110, // +-2000 deg/s, Gyro ODR selection: 400hz
+            0b0100_0111, // +-8g, Accel ODR selection: 400hz,
             0b0100_0000, // Temp DLPF: 16Hz,
             0b0000_0010, // Gyro DLPF: 121Hz,
             0b0000_0010, // Accel DLPF: 121Hz,
