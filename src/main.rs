@@ -5,6 +5,7 @@ mod icm42670;
 mod imu_common;
 mod motor_drive;
 mod motion_data;
+mod motion_data_angular;
 mod utils;
 mod receiver;
 
@@ -171,9 +172,9 @@ async fn main(spawner: Spawner) {
         }
         ticker.next().await
     };
+    let gravmag = imuctl.gravity_mag();
     spawner
         .spawn(imu_read_task(imuctl)).unwrap();
-
     /* PWM / MOTOR DRIVER SETUP */
 
     debug_println!("Initializing motor pwms");
@@ -216,7 +217,7 @@ async fn main(spawner: Spawner) {
     let backright = temp;*/
     // 1 3
     // 0 2
-    let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright);
+    let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright, gravmag);
     debug_println!("Motor driver set up");
 
     let mut led = Output::new(

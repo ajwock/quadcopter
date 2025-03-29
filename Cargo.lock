@@ -1367,6 +1367,7 @@ dependencies = [
  "smallvec",
  "smoltcp",
  "static_cell",
+ "typenum",
 ]
 
 [[package]]
