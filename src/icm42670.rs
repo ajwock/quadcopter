@@ -49,7 +49,6 @@ impl<'a> Icm42670<'a> {
     }
 
     async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
-        println!("Blocking read");
         self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
             .map_err(|_| {
                 println!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address);
@@ -68,8 +67,8 @@ impl<'a> Icm42670<'a> {
         }
         println!("Configuring accelerometer and gyro");
         let configuration_data = &[
-            0b0000_0110, // +-2000 deg/s, Gyro ODR selection: 400hz
-            0b0100_0111, // +-8g, Accel ODR selection: 400hz,
+            0b0000_1010, // +-2000 deg/s, Gyro ODR selection: 50hz
+            0b0100_1010, // +-8g, Accel ODR selection: 50hz,
             0b0100_0000, // Temp DLPF: 16Hz,
             0b0000_0010, // Gyro DLPF: 121Hz,
             0b0000_0010, // Accel DLPF: 121Hz,
@@ -80,11 +79,9 @@ impl<'a> Icm42670<'a> {
 
     pub async fn read_motion_data(&mut self) -> MotionData {
         let mut outbuf = [0; 12];
-        println!("Reading motion data");
         if let Err(_) = self.burst_read_regs(0x0b, &mut outbuf).await {
             return self.prev_motion_data
         }
-        println!("outputting motion data");
         let out = MotionData {
             acc_x: i16::from_be_bytes([outbuf[0], outbuf[1]]),
             acc_y: i16::from_be_bytes([outbuf[2], outbuf[3]]),

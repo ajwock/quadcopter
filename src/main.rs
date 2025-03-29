@@ -176,7 +176,7 @@ async fn main(spawner: Spawner) {
 
     /* PWM / MOTOR DRIVER SETUP */
 
-    println!("Initializing motor pwms");
+    debug_println!("Initializing motor pwms");
     let mut ledc = Ledc::new(peripherals.LEDC);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
     static LSTIMER0: StaticCell<ledc::timer::Timer<'_, ledc::LowSpeed>> = StaticCell::new();
@@ -217,7 +217,7 @@ async fn main(spawner: Spawner) {
     // 1 3
     // 0 2
     let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright);
-    println!("Motor driver set up");
+    debug_println!("Motor driver set up");
 
     let mut led = Output::new(
         peripherals.GPIO7,
@@ -236,7 +236,7 @@ async fn main(spawner: Spawner) {
         if collective_pct < 70 && collective_tick_reducer == 0 {
             collective_pct += 1;
         }
-        collective_tick_reducer = (collective_tick_reducer + 1) % 5;
+        collective_tick_reducer = (collective_tick_reducer + 1) % 20;
         if led_tick_reducer == 0 {
             led.toggle()
         }
@@ -256,14 +256,14 @@ async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static 
     let mut tx_buffer = [0; 2048];
     let mut sock = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
     loop {
-        println!("Waiting for connection...");
+        debug_println!("Waiting for connection...");
         if let Err(e) = sock
             .accept(IpListenEndpoint {
                 addr: None,
                 port: 4200,
             })
                 .await {
-            println!("Socket connection error in control loop, continuing: {:?}", e);
+            debug_println!("Socket connection error in control loop, continuing: {:?}", e);
             continue
         }
         use embedded_io_async::Write;
@@ -271,14 +271,14 @@ async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static 
         loop {
             match sock.read(&mut buf).await {
                 Ok(0) => {
-                    println!("Client connection closed.");
+                    debug_println!("Client connection closed.");
                     break
                 }
                 Ok(len) => {
-                    println!("Got packet: {:?}", &buf[0..len]);
+                    debug_println!("Got packet: {:?}", &buf[0..len]);
                 }
                 Err(e) => {
-                    println!("Read error in control loop: {:?}", e);
+                    debug_println!("Read error in control loop: {:?}", e);
                     break
                 }
             }
@@ -321,15 +321,15 @@ async fn run_dhcp(stack: Stack<'static>, gw_ip_addr: &'static str) {
             &mut buf,
         )
         .await
-        .inspect_err(|e| println!("DHCP server error: {e:?}"));
+        .inspect_err(|e| debug_println!("DHCP server error: {e:?}"));
         Timer::after(Duration::from_millis(500)).await;
     }
 }
 
 #[embassy_executor::task(pool_size=10)]
 async fn manage_ap_connection(mut controller: WifiController<'static>) {
-    println!("start connection task");
-    println!("Device capabilities: {:?}", controller.capabilities());
+    debug_println!("start connection task");
+    debug_println!("Device capabilities: {:?}", controller.capabilities());
     loop {
         match esp_wifi::wifi::wifi_state() {
             WifiState::ApStarted => {
@@ -345,9 +345,9 @@ async fn manage_ap_connection(mut controller: WifiController<'static>) {
                 ..Default::default()
             });
             controller.set_configuration(&client_config).unwrap();
-            println!("Starting wifi");
+            debug_println!("Starting wifi");
             controller.start_async().await.unwrap();
-            println!("Wifi started!");
+            debug_println!("Wifi started!");
         }
     }
 }

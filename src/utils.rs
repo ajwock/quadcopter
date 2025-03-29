@@ -14,3 +14,8 @@ pub fn rate_limit<T: Add<Output=T> + Sub<Output=T> + Ord + Copy>(current: T, tar
         current + new_delta
     }
 }
+
+#[macro_export]
+macro_rules! debug_println {
+    ($($arg:tt)*) => (if true { println!($($arg)*) });
+}

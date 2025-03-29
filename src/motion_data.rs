@@ -4,7 +4,7 @@ use esp_println::println;
 use core::ops::{Add, Sub, Mul, Div, Shl, Shr};
 use fixed::types::extra::{U8, U15, U13};
 use az::{Cast, CheckedCast, SaturatingCast};
-
+use crate::debug_println;
 pub type UnityFixed16 = FixedI16<U15>;
 
 #[derive(Copy, Clone, Default, Debug)]
@@ -30,7 +30,7 @@ impl MotionData {
     }
 
     pub(crate) fn show(&self) {
-        println!("Acceleration: {{ x: {}, y: {}, z: {} }}, Gyro: {{ x: {}, y: {}, z: {} }}", self.acc_x, self.acc_y, self.acc_z, self.gyr_x, self.gyr_y, self.gyr_z);
+        debug_println!("Acceleration: {{ x: {}, y: {}, z: {} }}, Gyro: {{ x: {}, y: {}, z: {} }}", self.acc_x, self.acc_y, self.acc_z, self.gyr_x, self.gyr_y, self.gyr_z);
     }
 
     pub(crate) fn into_vector(self) -> [i16; 6] {
@@ -71,14 +71,14 @@ fn compute_magnitude<const N: usize>(v: [FixedI16<U15>; N]) -> FixedI16<U15> {
 }
 
 fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] {
-    println!("Normalizing");
+    debug_println!("Normalizing");
     let up_v = v.map(|x| Cast::<FixedI32<U15>>::cast(x));
     let max = up_v.iter().map(|x| x.abs()).max().unwrap();
     // Prevent div by zero
     if max == 0 {
         return [FixedI16::<U15>::from_num(0); N];
     }
-    println!("max recip");
+    debug_println!("max recip");
     let max_recip = max.recip();
     let scaled = up_v.map(|x| x * max_recip);
     let square_sum = scaled.iter().map(|&x| x * x).sum::<FixedI32<U15>>();
@@ -87,7 +87,7 @@ fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] 
     if square_sum == 0 {
         return [FixedI16::<U15>::from_num(0); N];
     }
-    println!("inv_sqsum");
+    debug_println!("inv_sqsum");
     let inv_sqsum = square_sum.sqrt().recip();
     scaled.map(|x| (x * inv_sqsum).saturating_cast())
 }
