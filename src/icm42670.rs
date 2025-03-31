@@ -2,6 +2,7 @@ use esp_hal::i2c::master::{I2c, Operation};
 use esp_hal::Async;
 use alloc::format;
 use esp_println::println;
+use crate::debug_println;
 use smallvec::SmallVec;
 use embassy_time::Delay;
 use embedded_hal_async::delay::DelayNs;
@@ -240,9 +241,31 @@ impl GyroConfig {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum FifoMode {
+    Stream,
+    StopOnFull,
+}
+
+impl Default for FifoMode {
+    fn default() -> Self {
+        Self::Stream
+    }
+}
+
+impl FifoMode {
+    fn to_bits(self) -> u8 {
+        match self {
+            Self::Stream => 0b0,
+            Self::StopOnFull => 0b1,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Default)]
 pub struct FifoConfig {
     pub watermark: Option<u16>,
+    pub mode: FifoMode,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -297,8 +320,8 @@ impl<'a> Icm42670<'a> {
 
     async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
         self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
-            .map_err(|_| {
-                println!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address);
+            .map_err(|e| {
+                panic!("Failed to burst read from {} registers starting at {}: {:?}", regs_out.len(), start_address, e);
             ()
         })
     }
@@ -331,9 +354,20 @@ impl<'a> Icm42670<'a> {
         // 10us after write, then reset the blk_sel_w is 0 afterward
         let mut d = embassy_time::Delay;
         d.delay_us(10).await;
-        self.write_reg(0x81, value).await;
+        self.write_reg(0x7b, value).await;
         d.delay_us(10).await;
-        self.write_reg(0, 0x80).await;
+        self.write_reg(0x7a, 0).await;
+    }
+
+    pub async fn read_block_reg(&mut self, blk: BlkSel, address: u8) -> u8 {
+        let block_sel = blk.block_sel_val();
+        self.burst_write_regs(0x7C, &[block_sel, address]).await;
+        let mut d = embassy_time::Delay;
+        d.delay_us(10).await;
+        let read_val = self.read_reg(0x7e).await;
+        d.delay_us(10).await;
+        self.write_reg(0x7c, 0).await;
+        read_val
     }
 
     pub async fn fifo_configure(&mut self, conf: Config) {
@@ -352,7 +386,22 @@ impl<'a> Icm42670<'a> {
         if conf.gyro_config.is_some() {
             conf5_flags |= 1 << 1;
         }
+        // Enable timestamp.  Possibly essential to avoid bad packets?
+        self.write_block_reg(BlkSel::MREG1, 0x0, 0b01).await;
         self.write_block_reg(BlkSel::MREG1, 0x1, conf5_flags).await;
+        // Not using ALP/WUOSC so disable wakeup
+        self.write_block_reg(BlkSel::MREG1, 0x2, 0x1).await;
+        // Disable APEX for bigger FIFO
+        self.write_block_reg(BlkSel::MREG1, 0x6, 1 << 6).await;
+        let readback = self.read_block_reg(BlkSel::MREG1, 0x1).await;
+        if readback != conf5_flags {
+            println!("Fifo config failed- sent conf val 0x{:x} but read back 0x{:x}", conf5_flags, readback);
+        }
+        println!("Got matching configs: 0x{:x} and 0x{:x}", conf5_flags, readback);
+        println!("Enabling fifo");
+        let mut conf1_flags = 0;
+        conf1_flags |= fifo_config.mode.to_bits() << 1;
+        self.write_reg(0x28, conf1_flags).await;
     }
 
     pub async fn configure2(&mut self, conf: Config) {
@@ -385,8 +434,22 @@ impl<'a> Icm42670<'a> {
         d.delay_us(200).await;
     }
 
+    pub async fn flush_fifo(&mut self) {
+        self.write_reg(0x02, 1 << 2).await;
+        embassy_time::Delay.delay_ns(1500).await;
+        let flushed = (self.read_reg(0x02).await & 0b100) == 0;
+        if !flushed {
+            println!("Note, failed to flush fifo");
+        }
+    }
+
     pub async fn read_fifo_packet(&mut self) -> Option<FifoPacket> {
-        let header_data = self.read_reg(0x3f).await;
+        let mut buf = [0; 16];
+        let portion = &mut buf[0..16];
+        self.burst_read_regs(0x3f, portion).await.unwrap();
+        debug_println!("Fifo packet: {:?}", portion);
+        let header_data = portion[0];
+        debug_println!("Header: {header_data}");
         // Fifo empty
         if header_data == 0xFF {
             return None
@@ -395,9 +458,6 @@ impl<'a> Icm42670<'a> {
         if !header.has_data() {
             return None
         }
-        let mut buf = [0; 24];
-        let portion = &mut buf[0..header.packet_size()];
-        self.burst_read_regs(0x3f, portion).await.unwrap();
         let (&mut h2, mut portion) = portion.split_first_mut().unwrap();
         assert!(h2 == header_data, "FIFO mode set incorrectly");
         let accel_data = if header.has_accel() {

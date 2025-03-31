@@ -7,6 +7,14 @@ version = "0.1.0"
 name = "quadcopter"
 path = "./src/main.rs"
 
+[patch.crates-io]
+esp-hal = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-hal" }
+esp-wifi = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-wifi" }
+esp-hal-embassy = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-hal-embassy" }
+esp-alloc = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-alloc" }
+
+
+
 [dependencies]
 embassy-net = { version = "0.6.0", features = [
   "dhcpv4",
@@ -23,7 +31,7 @@ esp-backtrace = { version = "0.15.1", features = [
   "panic-handler",
   "println",
 ] }
-esp-hal = { version = "1.0.0-beta.0", features = ["esp32c3", "unstable"] }
+esp-hal = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-hal", features=["unstable", "esp32c3"] }
 esp-println = { version = "0.13.0", features = ["esp32c3"] }
 smoltcp = { version = "0.12.0", default-features = false, features = [
   "medium-ethernet",

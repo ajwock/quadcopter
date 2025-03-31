@@ -9,6 +9,7 @@ mod motion_data_angular;
 mod utils;
 mod receiver;
 
+use embedded_hal_async::delay::DelayNs;
 use esp_println::println;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer, Ticker};
@@ -161,7 +162,7 @@ async fn main(spawner: Spawner) {
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
-            .with_frequency(Rate::from_khz(400)),
+            .with_frequency(Rate::from_khz(1000)),
     )
     .unwrap()
     .with_sda(peripherals.GPIO10)
@@ -180,15 +181,27 @@ async fn main(spawner: Spawner) {
             gyro_odr:   ODR::Hz1600,
             gyro_dlpf:  DLPF::Bypassed,
         }),
-        fifo_config: None,
+        fifo_config: Some(Default::default()),
     };
     let mut imu = Icm42670::new(i2c); 
+    let mut ticker = Ticker::every(Duration::from_millis(10));
     imu.configure2(config).await;
     imu.full_enable().await;
+    imu.flush_fifo().await;
+    for i in 0..100 {
+        let mut good_packets = 0;
+        debug_println!("FIFOed packet group {} {{", i);
+        while let Some(packet) = imu.read_fifo_packet().await {
+            debug_println!("{:?}", packet);
+            good_packets += 1;
+        }
+        debug_println!("}}");
+        println!("{i}: {good_packets} packets");
+        ticker.next().await;
+    }
     let mut calibrator = ImuCalibrator::new(imu);
-
+    panic!("just stop now lol");
     // Tick the calibrator state machine until it's done
-    let mut ticker = Ticker::every(Duration::from_millis(10));
     let imuctl = loop {
         if let Some(out) = calibrator.calibration_tick().await {
             break out
