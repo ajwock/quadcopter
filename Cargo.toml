@@ -68,6 +68,8 @@ edge-nal-embassy = "0.5.0"
 edge-nal = "0.5.0"
 fixed_trigonometry = "0.4.4"
 typenum = "1.18.0"
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
 
 [profile.dev]
 # Rust debug is too slow.

@@ -43,7 +43,15 @@ use esp_hal::gpio::{
     OutputConfig,
 };
 use static_cell::StaticCell;
-use icm42670::Icm42670;
+use icm42670::{
+    Icm42670,
+    DLPF,
+    ODR,
+    AccelConfig,
+    GyroConfig,
+    AccelRange,
+    GyroRange,
+};
 use motion_data::MotionData;
 use embassy_sync::{
     signal::Signal,
@@ -160,8 +168,23 @@ async fn main(spawner: Spawner) {
     .with_scl(peripherals.GPIO8)
     .into_async();
 
+
+    let config = icm42670::Config {
+        accel_config: Some(AccelConfig {
+            accel_range: AccelRange::G4,
+            accel_odr:   ODR::Hz1600,
+            accel_dlpf:  DLPF::Bypassed,
+        }),
+        gyro_config: Some(GyroConfig {
+            gyro_range: GyroRange::DPS2000,
+            gyro_odr:   ODR::Hz1600,
+            gyro_dlpf:  DLPF::Bypassed,
+        }),
+        fifo_config: None,
+    };
     let mut imu = Icm42670::new(i2c); 
-    imu.configure().await;
+    imu.configure2(config).await;
+    imu.full_enable().await;
     let mut calibrator = ImuCalibrator::new(imu);
 
     // Tick the calibrator state machine until it's done
