@@ -2,10 +2,16 @@
 use fixed::{FixedI16, FixedI32};
 use esp_println::println;
 use core::ops::{Add, Sub, Mul, Div, Shl, Shr};
-use fixed::types::extra::{U8, U15, U13};
-use az::{Cast, CheckedCast, SaturatingCast};
+use fixed::types::extra::{U8, U15, U11};
 use crate::debug_println;
 pub type UnityFixed16 = FixedI16<U15>;
+pub type RadianFixed16 = FixedI16<U11>;
+use typenum::UTerm;
+use az::{Cast, SaturatingCast};
+use fixed_trigonometry::{
+    atan::atan2,
+    wrap_phase,
+};
 
 #[derive(Copy, Clone, Default, Debug)]
 pub(crate) struct MotionData {
@@ -64,13 +70,13 @@ pub(crate) struct FixedMotionData {
     pub gyr_z: UnityFixed16,
 }
 
-fn compute_magnitude<const N: usize>(v: [FixedI16<U15>; N]) -> FixedI16<U15> {
+fn compute_magnitude_15<const N: usize>(v: [FixedI16<U15>; N]) -> FixedI16<U15> {
     let up_v = v.map(|x| Cast::<FixedI32<U15>>::cast(x));
     up_v.iter().fold(FixedI32::<U15>::from_num(0), |acc, x| acc + x * x).sqrt()
         .saturating_cast()
 }
 
-fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] {
+fn normalize_vector_15<const N: usize>(v: [FixedI16<U15>; N]) -> [FixedI16<U15>; N] {
     debug_println!("Normalizing");
     let up_v = v.map(|x| Cast::<FixedI32<U15>>::cast(x));
     let max = up_v.iter().map(|x| x.abs()).max().unwrap();
@@ -92,14 +98,42 @@ fn normalize_vector<const N: usize>(v: [FixedI16<U15>; N]) -> [UnityFixed16; N] 
     scaled.map(|x| (x * inv_sqsum).saturating_cast())
 }
 
+fn compute_magnitude_12<const N: usize>(v: [FixedI16<U11>; N]) -> FixedI16<U11> {
+    let up_v = v.map(|x| Cast::<FixedI32<U11>>::cast(x));
+    up_v.iter().fold(FixedI32::<U11>::from_num(0), |acc, x| acc + x * x).sqrt()
+        .saturating_cast()
+}
+
+fn normalize_vector_12<const N: usize>(v: [FixedI16<U11>; N]) -> [FixedI16<U11>; N] {
+    debug_println!("Normalizing");
+    let up_v = v.map(|x| Cast::<FixedI32<U11>>::cast(x));
+    let max = up_v.iter().map(|x| x.abs()).max().unwrap();
+    // Prevent div by zero
+    if max == 0 {
+        return [FixedI16::<U11>::from_num(0); N];
+    }
+    debug_println!("max recip");
+    let max_recip = max.recip();
+    let scaled = up_v.map(|x| x * max_recip);
+    let square_sum = scaled.iter().map(|&x| x * x).sum::<FixedI32<U11>>();
+    // Prevent div by zero again- this wouldn't be possible if we were using real numbers
+    // but these are only represenations.
+    if square_sum == 0 {
+        return [FixedI16::<U11>::from_num(0); N];
+    }
+    debug_println!("inv_sqsum");
+    let inv_sqsum = square_sum.sqrt().recip();
+    scaled.map(|x| (x * inv_sqsum).saturating_cast())
+}
+
 impl FixedMotionData {
     pub fn acc_magnitude(self) -> FixedI16<U15> {
-        compute_magnitude(self.into_acc_vector())
+        compute_magnitude_15(self.into_acc_vector())
     }
 
     pub fn normalized_acc(self) -> [FixedI16<U15>; 3] {
         let vec = [self.acc_x, self.acc_y, self.acc_z];
-        let normalized = normalize_vector(vec);
+        let normalized = normalize_vector_15(vec);
         if normalized.iter().all(|&x| x == UnityFixed16::from_bits(0)) {
             [UnityFixed16::from_num(0), UnityFixed16::MAX, UnityFixed16::from_num(0)]
         } else {
@@ -123,6 +157,50 @@ impl FixedMotionData {
             gyr_x: v[3],
             gyr_y: v[4],
             gyr_z: v[5],
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct TiltData {
+    pub accel_xz_tilt: RadianFixed16,
+    pub accel_yz_tilt: RadianFixed16,
+    pub accel_magnitude: RadianFixed16,
+    pub gyro_x_ddt: RadianFixed16,
+    pub gyro_y_ddt: RadianFixed16,
+    pub gyro_z_ddt: RadianFixed16,
+}
+
+impl TiltData {
+    pub fn tilt_vector(&self) -> [RadianFixed16; 2] {
+        [self.accel_xz_tilt, self.accel_yz_tilt]
+    }
+}
+
+pub fn to_unity(x: RadianFixed16) -> UnityFixed16 {
+    UnityFixed16::from_bits(x.to_bits())
+}
+
+impl From<MotionData> for TiltData {
+    fn from(other: MotionData) -> Self {
+        // Calculate acceleration magnitude, x_tilt, and y_tilt
+        let v = [FixedI32::<U11>::from_bits(other.acc_x as i32), FixedI32::<U11>::from_bits(other.acc_y as i32), FixedI32::<U11>::from_bits(other.acc_z as i32)];
+        println!("Acc v {:?}", v);
+        let v_sq = v.map(|x| x * x);
+        println!("v^2 {:?}", v_sq);
+        let acc_magnitude = v_sq.iter().fold(FixedI32::<U11>::from_num(0), |acc, &x| acc + x).sqrt();
+        println!("Acc_magnitude {acc_magnitude}");
+        let xz_orthogonal_mag = [v_sq[0], v_sq[2]].iter().fold(FixedI32::<U11>::from_num(0), |acc, &x| acc + x).sqrt();
+        let yz_orthogonal_mag = [v_sq[1], v_sq[2]].iter().fold(FixedI32::<U11>::from_num(0), |acc, &x| acc + x).sqrt();
+        let xz_tilt = atan2(v[0], yz_orthogonal_mag);
+        let yz_tilt = atan2(v[1], xz_orthogonal_mag);
+        Self {
+            accel_xz_tilt: xz_tilt.saturating_cast(),
+            accel_yz_tilt: yz_tilt.saturating_cast(),
+            accel_magnitude: acc_magnitude.saturating_cast(),
+            gyro_x_ddt: FixedI16::<U11>::from_bits(other.gyr_x),
+            gyro_y_ddt: FixedI16::<U11>::from_bits(other.gyr_y),
+            gyro_z_ddt: FixedI16::<U11>::from_bits(other.gyr_z),
         }
     }
 }

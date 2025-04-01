@@ -45,13 +45,15 @@ impl<M: Imu> ImuCalibrator<M> {
         println!("Note: Calibration offset magnitude: {}", calib_acc_magnitude);
         Some(
             ImuController::new(self.imu_holder.take().unwrap())
-                .with_calibration(calib_offsets))
+                .with_calibration(calib_offsets)
+                .with_gravmag(magnitude))
     }
 }
 
 pub struct ImuController<M: Imu> {
     imu: M,
     calibration_offsets: MotionData,
+    gravity_magnitude: i16,
 }
 
 impl<M: Imu> ImuController<M> {
@@ -59,6 +61,7 @@ impl<M: Imu> ImuController<M> {
         Self {
             imu,
             calibration_offsets: MotionData::zero(),
+            gravity_magnitude: i16::MAX / 4,
         }
     }
 
@@ -69,7 +72,18 @@ impl<M: Imu> ImuController<M> {
         }
     }
 
+    pub fn with_gravmag(self, gravity_magnitude: i16) -> Self {
+        Self {
+            gravity_magnitude,
+            ..self
+        }
+    }
+
     pub async fn read_motion_data(&mut self) -> MotionData {
         self.imu.read_motion_data_raw().await + self.calibration_offsets
+    }
+
+    pub fn gravity_mag(&self) -> i16 {
+        self.gravity_magnitude
     }
 }
