@@ -49,9 +49,10 @@ impl<'a> Icm42670<'a> {
     }
 
     async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
-        self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
-            .map_err(|_| {
-                println!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address);
+        self.comm.write_read_async(ACCEL_ADDRESS, &[start_address], regs_out)
+            .await
+            .map_err(|e| {
+                panic!("Failed to burst read from {} registers starting at {}: {:?}", regs_out.len(), start_address, e);
             ()
         })
     }
