@@ -2,16 +2,27 @@
 use fixed::{FixedI16, FixedI32};
 use esp_println::println;
 use core::ops::{Add, Sub, Mul, Div, Shl, Shr};
-use fixed::types::extra::{U8, U15, U11};
+use fixed::types::extra::{U8, U15, U11, U10, U5, U16, U20};
 use crate::debug_println;
 pub type UnityFixed16 = FixedI16<U15>;
 pub type RadianFixed16 = FixedI16<U11>;
+// Focus on the range of -180 to +180 degrees with some subdegree precision
+pub type DegreeFixed16 = FixedI16<U5>;
+pub type DegreeFixed32 = FixedI32<U20>;
 use typenum::UTerm;
 use az::{Cast, SaturatingCast};
 use fixed_trigonometry::{
     atan::atan2,
     wrap_phase,
 };
+
+// For 2000dps, FixedI32<U10>: const DPS_BITS: i32 = 62;
+// For 2000 dps, FixedI32<U15>
+//const DPS_BITS: i32 = 64000;
+// 1/16.4
+//const DEGREES_PER_LSB: DegreeFixed32 = DegreeFixed32::from_bits(DPS_BITS);
+//const DEGREES_PER_LSB_OVER_2: DegreeFixed32 = DegreeFixed32::from_bits(DPS_BITS / 2);
+
 
 #[derive(Copy, Clone, Default, Debug)]
 pub(crate) struct MotionData {
@@ -24,6 +35,9 @@ pub(crate) struct MotionData {
 }
 
 impl MotionData {
+    pub fn gyro_vec(&self) -> [i16; 3] {
+        [self.gyr_x, self.gyr_y, self.gyr_z]
+    }
     pub(crate) fn zero() -> Self {
         Self {
             acc_x: 0,

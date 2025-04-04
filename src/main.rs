@@ -6,9 +6,11 @@ mod imu_common;
 mod motor_drive;
 mod motion_data;
 mod motion_data_angular;
+mod orientation_tracking;
 mod utils;
 mod receiver;
 
+use orientation_tracking::OrientationTracker;
 use embedded_hal_async::delay::DelayNs;
 use esp_println::println;
 use embassy_executor::Spawner;
@@ -187,20 +189,19 @@ async fn main(spawner: Spawner) {
     let mut ticker = Ticker::every(Duration::from_millis(10));
     imu.configure2(config).await;
     imu.full_enable().await;
-    imu.flush_fifo().await;
+    /*
     for i in 0..100 {
         let mut good_packets = 0;
         debug_println!("FIFOed packet group {} {{", i);
-        while let Some(packet) = imu.read_fifo_packet().await {
+        while let Ok(Some(packet)) = imu.read_fifo_packet().await {
             debug_println!("{:?}", packet);
             good_packets += 1;
         }
         debug_println!("}}");
         println!("{i}: {good_packets} packets");
         ticker.next().await;
-    }
+    }*/
     let mut calibrator = ImuCalibrator::new(imu);
-    panic!("just stop now lol");
     // Tick the calibrator state machine until it's done
     let imuctl = loop {
         if let Some(out) = calibrator.calibration_tick().await {
@@ -209,8 +210,8 @@ async fn main(spawner: Spawner) {
         ticker.next().await
     };
     let gravmag = imuctl.gravity_mag();
-    spawner
-        .spawn(imu_read_task(imuctl)).unwrap();
+//    spawner
+//        .spawn(imu_read_task(imuctl)).unwrap();
     /* PWM / MOTOR DRIVER SETUP */
 
     debug_println!("Initializing motor pwms");
@@ -267,22 +268,30 @@ async fn main(spawner: Spawner) {
     let mut collective_pct = 0;
     let mut collective_tick_reducer = 0;
     let mut led_tick_reducer = 0;
+
+    let mut imu = imuctl.imu;
+    let calib = imuctl.calibration_offsets;
+    imu.flush_fifo().await;
+    let mut orientation_tracker = OrientationTracker::new(imu, calib);
     loop {
-        IMU_START_READ.signal(());
+        orientation_tracker.track().await;
+        println!("Orientation: {:?}", orientation_tracker.get_orientation());
+        if led_tick_reducer == 0 {
+            led.toggle()
+        }
+        led_tick_reducer = (led_tick_reducer + 1) % 30;
+
+/*        IMU_START_READ.signal(());
         prev_motiondata.show();
         if collective_pct < 70 && collective_tick_reducer == 0 {
             collective_pct += 1;
         }
         collective_tick_reducer = (collective_tick_reducer + 1) % 20;
-        if led_tick_reducer == 0 {
-            led.toggle()
-        }
-        led_tick_reducer = (led_tick_reducer + 1) % 30;
         motor_drive.set_collective_pct(collective_pct);
         motor_drive.attitude_correct(prev_motiondata);
         motor_drive.motor_tick();
         let motion_data = IMU_READ_DONE.wait().await;
-        prev_motiondata = motion_data;
+        prev_motiondata = motion_data;*/
         ticker.next().await;
     }
 }

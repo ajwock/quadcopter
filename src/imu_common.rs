@@ -31,18 +31,24 @@ impl<M: Imu> ImuCalibrator<M> {
         }
 
         let sum_vector = self.calibration_data.iter().map(|x| x.into_vector().map(|y| y as i32))
+            .inspect(|y| println!("y cast: {:?}", y))
             .fold([0; 6], |acc, v| core::array::from_fn(|i| acc[i] + v[i]));
+        println!("Sum_vector: {:?}", sum_vector);
         let avg_offsets = sum_vector.map(|x| (x >> 4) as i16);
         let raw_offsets = MotionData::from_vector(avg_offsets);
         let magnitude = raw_offsets.acc_magnitude();
         let mut gravity_vector = MotionData::zero();
         gravity_vector.acc_z = magnitude;
         let calib_offsets = gravity_vector - raw_offsets;
+        println!("Gravity vector: {:?}", gravity_vector);
+        println!("raw_offsets: {:?}", raw_offsets);
+        println!("calib_offsets: {:?}", calib_offsets);
         let calib_acc_magnitude = calib_offsets.acc_magnitude();
         if calib_acc_magnitude > 1000 {
             panic!("Calibration failed- offset magnitude {} > 1000.  Ensure the device is on a level surface", calib_acc_magnitude);
         }
         println!("Note: Calibration offset magnitude: {}", calib_acc_magnitude);
+        println!("Calibration data: {:?}, calibration_offsets: {:?}", self.calibration_data, calib_offsets);
         Some(
             ImuController::new(self.imu_holder.take().unwrap())
                 .with_calibration(calib_offsets)
@@ -51,9 +57,9 @@ impl<M: Imu> ImuCalibrator<M> {
 }
 
 pub struct ImuController<M: Imu> {
-    imu: M,
-    calibration_offsets: MotionData,
-    gravity_magnitude: i16,
+    pub imu: M,
+    pub calibration_offsets: MotionData,
+    pub gravity_magnitude: i16,
 }
 
 impl<M: Imu> ImuController<M> {

@@ -8,6 +8,7 @@ use embassy_time::Delay;
 use embedded_hal_async::delay::DelayNs;
 use crate::motion_data::MotionData;
 use crate::imu_common::Imu;
+use esp_hal::i2c;
 
 // 7 bit address of the accelerometer
 pub const ACCEL_ADDRESS: u8 = 0b1101000;
@@ -172,10 +173,10 @@ impl AccelConfig {
 
 #[derive(Copy, Clone, Debug)]
 pub struct FifoPacket {
-    accel_data: Option<(i16, i16, i16)>,
-    gyro_data:  Option<(i16, i16, i16)>,
-    temp_data:  u16,
-    timestamp:  Option<u16>,
+    pub accel_data: Option<[i16; 3]>,
+    pub gyro_data:  Option<[i16; 3]>,
+    pub temp_data:  u16,
+    pub timestamp:  Option<u16>,
 }
 
 
@@ -320,8 +321,8 @@ impl<'a> Icm42670<'a> {
 
     async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
         self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
-            .map_err(|_| {
-                println!("Failed to burst read from {} registers starting at {}", regs_out.len(), start_address);
+            .map_err(|e| {
+                panic!("Failed to burst read from {} registers starting at {}: {:?}", regs_out.len(), start_address, e);
             ()
         })
     }
@@ -443,20 +444,21 @@ impl<'a> Icm42670<'a> {
         }
     }
 
-    pub async fn read_fifo_packet(&mut self) -> Option<FifoPacket> {
+    pub async fn read_fifo_packet(&mut self) -> Result<Option<FifoPacket>, i2c::master::Error> {
         let mut buf = [0; 16];
         let portion = &mut buf[0..16];
-        self.burst_read_regs(0x3f, portion).await.unwrap();
+        let _ = self.burst_read_regs(0x3f, portion).await.map_err(|e|
+            panic!("Failed to burst read: {:?}", e));
         debug_println!("Fifo packet: {:?}", portion);
         let header_data = portion[0];
         debug_println!("Header: {header_data}");
         // Fifo empty
         if header_data == 0xFF {
-            return None
+            return Ok(None)
         }
         let header = FifoPacketHeader(header_data);
         if !header.has_data() {
-            return None
+            return Ok(None)
         }
         let (&mut h2, mut portion) = portion.split_first_mut().unwrap();
         assert!(h2 == header_data, "FIFO mode set incorrectly");
@@ -466,7 +468,7 @@ impl<'a> Icm42670<'a> {
             let acc_x = i16::from_be_bytes([chunk[0], chunk[1]]);
             let acc_y = i16::from_be_bytes([chunk[2], chunk[3]]);
             let acc_z = i16::from_be_bytes([chunk[4], chunk[5]]);
-            Some((acc_x, acc_y, acc_z))
+            Some([acc_x, acc_y, acc_z])
         } else {
             None
         };
@@ -476,7 +478,7 @@ impl<'a> Icm42670<'a> {
             let gyr_x = i16::from_be_bytes([chunk[0], chunk[1]]);
             let gyr_y = i16::from_be_bytes([chunk[2], chunk[3]]);
             let gyr_z = i16::from_be_bytes([chunk[4], chunk[5]]);
-            Some((gyr_x, gyr_y, gyr_z))
+            Some([gyr_x, gyr_y, gyr_z])
         } else {
             None
         };
@@ -494,7 +496,7 @@ impl<'a> Icm42670<'a> {
         } else {
             None
         };
-        Some(FifoPacket { accel_data, gyro_data, temp_data, timestamp })
+        Ok(Some(FifoPacket { accel_data, gyro_data, temp_data, timestamp }))
     }
 
     pub async fn read_motion_data(&mut self) -> MotionData {
