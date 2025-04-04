@@ -1,12 +1,12 @@
 %TF.GenerationSoftware,KiCad,Pcbnew,6.0.11+dfsg-1*%
-%TF.CreationDate,2025-03-15T00:22:14-04:00*%
+%TF.CreationDate,2025-04-04T15:59:19-04:00*%
 %TF.ProjectId,quadcopter_boostbuck_small,71756164-636f-4707-9465-725f626f6f73,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Copper,L2,Bot*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 6.0.11+dfsg-1) date 2025-03-15 00:22:14*
+G04 Created by KiCad (PCBNEW 6.0.11+dfsg-1) date 2025-04-04 15:59:19*
 %MOMM*%
 %LPD*%
 G01*
@@ -21,13 +21,13 @@ G04 APERTURE END LIST*
 D10*
 %TO.P,U1,1*%
 %TO.N,+BATT*%
-X190500000Y-102195000D03*
+X38862000Y-22820000D03*
 D11*
 %TO.P,U1,2*%
 %TO.N,GND*%
-X190500000Y-99655000D03*
+X38862000Y-20280000D03*
 %TO.P,U1,3*%
 %TO.N,v_out*%
-X190500000Y-97115000D03*
+X38862000Y-17740000D03*
 %TD*%
 M02*
