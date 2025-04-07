@@ -7,7 +7,12 @@ use smallvec::SmallVec;
 use embassy_time::Delay;
 use embedded_hal_async::delay::DelayNs;
 use crate::motion_data::MotionData;
-use crate::imu_common::Imu;
+use core::convert::TryFrom;
+use crate::imu_common::{
+    Imu,
+    ImuMsg,
+    ImuError,
+};
 use esp_hal::i2c;
 
 // 7 bit address of the accelerometer
@@ -179,6 +184,19 @@ pub struct FifoPacket {
     pub timestamp:  Option<u16>,
 }
 
+impl TryFrom<FifoPacket> for ImuMsg {
+    type Error = ImuError;
+    fn try_from(pkt: FifoPacket) -> Result<Self, Self::Error> {
+        let (Some(accel_data), Some(gyro_data), Some(timestamp)) = (
+            pkt.accel_data,
+            pkt.gyro_data,
+            pkt.timestamp
+        ) else {
+            return Err(ImuError::missing_info())
+        };
+        Ok(ImuMsg::new(accel_data, gyro_data, timestamp))
+    }
+}
 
 struct FifoPacketHeader(u8);
 
@@ -520,5 +538,14 @@ impl<'a> Icm42670<'a> {
 impl Imu for Icm42670<'_> {
     async fn read_motion_data_raw(&mut self) -> MotionData {
         self.read_motion_data().await
+    }
+
+    async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
+        let fifo_packet = match self.read_fifo_packet().await {
+            Ok(Some(pkt)) => Ok(pkt),
+            Ok(None) => Err(ImuError::not_ready()),
+            Err(_) => Err(ImuError::comms_error()),
+        }?;
+        fifo_packet.try_into()
     }
 }

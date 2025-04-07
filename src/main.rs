@@ -203,12 +203,7 @@ async fn main(spawner: Spawner) {
     }*/
     let mut calibrator = ImuCalibrator::new(imu);
     // Tick the calibrator state machine until it's done
-    let imuctl = loop {
-        if let Some(out) = calibrator.calibration_tick().await {
-            break out
-        }
-        ticker.next().await
-    };
+    let imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
     let gravmag = imuctl.gravity_mag();
 //    spawner
 //        .spawn(imu_read_task(imuctl)).unwrap();
