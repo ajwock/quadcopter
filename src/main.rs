@@ -75,7 +75,7 @@ use esp_wifi::{
 use motor_drive::MotorDrive;
 use edge_nal::UdpBind;
 
-use imu_common::{ImuCalibrator, ImuController};
+use imu_common::{Imu, ImuCalibrator, ImuController};
 
 extern crate alloc;
 
@@ -189,21 +189,26 @@ async fn main(spawner: Spawner) {
     let mut ticker = Ticker::every(Duration::from_millis(10));
     imu.configure2(config).await;
     imu.full_enable().await;
-    /*
+ 
     for i in 0..100 {
         let mut good_packets = 0;
         debug_println!("FIFOed packet group {} {{", i);
+        /*
         while let Ok(Some(packet)) = imu.read_fifo_packet().await {
             debug_println!("{:?}", packet);
+            good_packets += 1;
+        }*/
+        while let Ok(msg) = imu.get_motion_data_msg().await {
+            debug_println!("{:?}", msg);
             good_packets += 1;
         }
         debug_println!("}}");
         println!("{i}: {good_packets} packets");
         ticker.next().await;
-    }*/
-    let mut calibrator = ImuCalibrator::new(imu);
+    }
+    let mut calibrator = ImuCalibrator::<_, 64>::new(imu);
     // Tick the calibrator state machine until it's done
-    let imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
+    let mut imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
     let gravmag = imuctl.gravity_mag();
 //    spawner
 //        .spawn(imu_read_task(imuctl)).unwrap();
@@ -264,10 +269,8 @@ async fn main(spawner: Spawner) {
     let mut collective_tick_reducer = 0;
     let mut led_tick_reducer = 0;
 
-    let mut imu = imuctl.imu;
-    let calib = imuctl.calibration_offsets;
-    imu.flush_fifo().await;
-    let mut orientation_tracker = OrientationTracker::new(imu, calib);
+    imuctl.flush_msgs().await;
+    let mut orientation_tracker = OrientationTracker::new(imuctl);
     loop {
         orientation_tracker.track().await;
         println!("Orientation: {:?}", orientation_tracker.get_orientation());
@@ -356,7 +359,7 @@ async fn run_dhcp(stack: Stack<'static>, gw_ip_addr: &'static str) {
 
     loop {
         _ = io::server::run(
-            &mut Server::<_, 64>::new_with_et(ip),
+            &mut Server::<_, 256>::new_with_et(ip),
             &ServerOptions::new(ip, Some(&mut gw_buf)),
             &mut bound_socket,
             &mut buf,

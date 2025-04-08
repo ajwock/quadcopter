@@ -68,6 +68,15 @@ impl ImuMsg {
         let gyr = self.gyro_data;
         MotionData::from_vector([acc[0], acc[1], acc[2], gyr[0], gyr[1], gyr[2]])
     }
+
+    pub fn with_calibration_data(self, calibration_offsets: MotionData) -> Self {
+        let offset_data = self.as_motion_data() + calibration_offsets;
+        Self {
+            accel_data: offset_data.acc_vec(),
+            gyro_data: offset_data.gyro_vec(),
+            timestamp: self.timestamp,
+        }
+    }
 }
 
 pub trait Imu {
@@ -77,16 +86,33 @@ pub trait Imu {
     async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
         Err(ImuError::unsupported())
     }
+
+    async fn wait_for_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
+        loop {
+            break match self.get_motion_data_msg().await {
+                Ok(m) => Ok(m),
+                Err(e) if e.is_not_ready() => {
+                    embassy_futures::yield_now().await;
+                    continue
+                }
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    async fn flush_msgs(&mut self) {
+        // Do nothing unless supported}
+    }
 }
 
 // The IMU calibrator must be run some opaque number of ticks until
 // it yields a calibratoed Imu Controller.
-pub struct ImuCalibrator<M: Imu> {
+pub struct ImuCalibrator<M: Imu, const N: usize> {
     imu_holder: Option<M>,
-    calibration_data: SmallVec<[MotionData; 64]>,
+    calibration_data: SmallVec<[MotionData; N]>,
 }
 
-impl<M: Imu> ImuCalibrator<M> {
+impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
     pub fn new(imu: M) -> Self {
         Self {
             imu_holder: Some(imu),
@@ -99,7 +125,7 @@ impl<M: Imu> ImuCalibrator<M> {
             .inspect(|y| println!("y cast: {:?}", y))
             .fold([0; 6], |acc, v| core::array::from_fn(|i| acc[i] + v[i]));
         println!("Sum_vector: {:?}", sum_vector);
-        let avg_offsets = sum_vector.map(|x| (x / 64) as i16);
+        let avg_offsets = sum_vector.map(|x| (x / (N as i32)) as i16);
         let raw_offsets = MotionData::from_vector(avg_offsets);
         let magnitude = raw_offsets.acc_magnitude();
         let mut gravity_vector = MotionData::zero();
@@ -181,7 +207,15 @@ impl<M: Imu> ImuController<M> {
         self.imu.read_motion_data_raw().await + self.calibration_offsets
     }
 
+    pub async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
+        self.imu.get_motion_data_msg().await.map(|x| x.with_calibration_data(self.calibration_offsets))
+    }
+
     pub fn gravity_mag(&self) -> i16 {
         self.gravity_magnitude
+    }
+
+    pub async fn flush_msgs(&mut self) {
+        self.imu.flush_msgs().await
     }
 }

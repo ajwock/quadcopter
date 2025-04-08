@@ -548,4 +548,8 @@ impl Imu for Icm42670<'_> {
         }?;
         fifo_packet.try_into()
     }
+
+    async fn flush_msgs(&mut self) {
+        self.flush_fifo().await
+    }
 }

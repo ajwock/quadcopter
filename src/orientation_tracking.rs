@@ -1,19 +1,23 @@
-use crate::icm42670::{Icm42670, FifoPacket};
+use crate::imu_common::{
+    Imu,
+    ImuError,
+    ImuMsg,
+    ImuController,
+};
 use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, RadianFixed16, to_unity, DegreeFixed16, DegreeFixed32};
 use az::Cast;
 use crate::debug_println;
 use esp_println::println;
 
-pub struct OrientationTracker<'a> {
+pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
-    pub imu: Icm42670<'a>,
-
-    calibration_offsets: MotionData,
+    pub imuctl: ImuController<M>,
 }
 
-const DEGREE_SCALING_FACTOR: i32 = 64000;
+//const DEGREE_SCALING_FACTOR: i32 = 64000;
+const DEGREE_SCALING_FACTOR: i32 = 512;
 const HALVED_DEGREE_SCALING_FACTOR: i32 = DEGREE_SCALING_FACTOR / 2;
 pub fn reading_to_dps_32(reading: i16) -> DegreeFixed32 {
     DegreeFixed32::from_bits(reading as i32) * DEGREE_SCALING_FACTOR
@@ -43,14 +47,13 @@ pub fn degree_wrap(input: DegreeFixed32) -> DegreeFixed32 {
     }
 }
 
-impl<'a> OrientationTracker<'a> {
-    pub fn new(imu: Icm42670<'a>, calibration_offsets: MotionData) -> Self {
+impl<M: Imu> OrientationTracker<M> {
+    pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
-            imu,
-            calibration_offsets,
+            imuctl,
         }
     }
 
@@ -59,27 +62,17 @@ impl<'a> OrientationTracker<'a> {
     }
 
     pub async fn track(&mut self) {
-        let mut error_count = 0;
         loop {
-            let fifo_packet = match self.imu.read_fifo_packet().await {
-                Ok(Some(fp)) => fp,
-                Err(e) => {
-                    debug_println!("Orientation tracker got error reading imu packet: {:?}", e);
-                    error_count += 1;
-                    if error_count >= 3 {
-                        debug_println!("Too many I2c errors this tick, resuming later...");
-                        return
-                    }
+            let msg = match self.imuctl.get_motion_data_msg().await {
+                Ok(m) => m,
+                Err(e) if e.is_not_ready() => {
                     break
-                },
-                Ok(None) => break,
+                }
+                Err(e) => panic!("Error in motion data tracking: {:?}", e),
             };
-            let Some(timestamp) = fifo_packet.timestamp else {
-                panic!("invalid packet type, no timestamp");
-            };
-            let Some(gyro_data) = fifo_packet.gyro_data else {
-                panic!("Invalid packet type, no gyro data");
-            };
+            let timestamp = msg.timestamp;
+            let _accel_data = msg.accel_data;
+            let gyro_data = msg.gyro_data;
             let timestamp_diff = if timestamp < self.last_gyro_timestamp {
                 u16::MAX - self.last_gyro_timestamp + timestamp
             } else {
@@ -95,14 +88,13 @@ impl<'a> OrientationTracker<'a> {
             // Below we pre-half our readings by lumping in a multiply by half with the
             // degree per lsb multiply.
             let time_step = timestamp_diff_to_seconds(timestamp_diff);
-            println!("time_step: {time_step}");
+            debug_println!("time_step: {time_step}");
             for i in 0..3 {
-                println!("gyro_data[{i}]: {}, self.calibration_offsets[{i}]: {}", gyro_data[i], self.calibration_offsets.gyro_vec()[i]);
-                let new_halved_reading = halved_reading_to_dps_32(gyro_data[i] + self.calibration_offsets.gyro_vec()[i]);
-                println!("New_halved reading[{i}]: {new_halved_reading}");
+                let new_halved_reading = halved_reading_to_dps_32(gyro_data[i]);
+                debug_println!("New_halved reading[{i}]: {new_halved_reading}");
                 let avg_derivative = new_halved_reading + self.last_gyro_data_halved[i];
                 let delta_orientation = avg_derivative * time_step;
-                println!("avg_derivative[{i}]: {avg_derivative}, delta orientation[{i}]: {delta_orientation}, last_gyro_data_halved[{i}]: {}", self.last_gyro_data_halved[i]);
+                debug_println!("avg_derivative[{i}]: {avg_derivative}, delta orientation[{i}]: {delta_orientation}, last_gyro_data_halved[{i}]: {}", self.last_gyro_data_halved[i]);
                 self.orientation[i] = self.orientation[i] + delta_orientation;
                 self.last_gyro_data_halved[i] = new_halved_reading;
             }

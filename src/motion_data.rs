@@ -38,6 +38,10 @@ impl MotionData {
     pub fn gyro_vec(&self) -> [i16; 3] {
         [self.gyr_x, self.gyr_y, self.gyr_z]
     }
+
+    pub fn acc_vec(&self) -> [i16; 3] {
+        [self.acc_x, self.acc_y, self.acc_z]
+    }
     pub(crate) fn zero() -> Self {
         Self {
             acc_x: 0,
