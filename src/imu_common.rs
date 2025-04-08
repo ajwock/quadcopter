@@ -154,7 +154,10 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
                     embassy_futures::yield_now().await;
                     continue 
                 },
-                Err(e) => return Err(e),
+                Err(e) => {
+                    println!("Got error: {:?}", e);
+                    continue
+                }
             };
             self.calibration_data.push(imu_msg.as_motion_data());
             if self.calibration_data.len() == self.calibration_data.capacity() {

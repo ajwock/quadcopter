@@ -313,39 +313,32 @@ impl<'a> Icm42670<'a> {
         }
     }
 
-    async fn write_reg(&mut self, reg_address: u8, val: u8) {
+    async fn write_reg(&mut self, reg_address: u8, val: u8) -> Result<(), i2c::master::Error> {
         self.comm.write_async(ACCEL_ADDRESS, &[reg_address, val])
             .await
-            .expect(format!("Failed to write val {} to register {}", val, reg_address).as_str());
     }
 
-    async fn burst_write_regs(&mut self, start_address: u8, reg_vals: &[u8]) {
+    async fn burst_write_regs(&mut self, start_address: u8, reg_vals: &[u8]) -> Result<(), i2c::master::Error> {
         let mut to_write = SmallVec::<[u8; 32]>::new();
         to_write.push(start_address);
         to_write.extend_from_slice(reg_vals);
         self.comm.write_async(ACCEL_ADDRESS, to_write.as_slice())
             .await
-            .expect(format!("Failed to burst write vals {:?} to registers starting at {}", reg_vals, start_address).as_str());
     }
 
     // Registers have an 8-bit address
-    async fn read_reg(&mut self, reg_address: u8) -> u8 {
+    async fn read_reg(&mut self, reg_address: u8) -> Result<u8, i2c::master::Error> {
         let mut datum = 0;
         self.comm.write_read_async(ACCEL_ADDRESS, &[reg_address], core::slice::from_mut(&mut datum))
-            .await
-            .expect(format!("Failed to read register {}", reg_address).as_str());
-        datum
+            .await?;
+        Ok(datum)
     }
 
-    async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), ()> {
+    async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), i2c::master::Error> {
         self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
-            .map_err(|e| {
-                panic!("Failed to burst read from {} registers starting at {}: {:?}", regs_out.len(), start_address, e);
-            ()
-        })
     }
 
-    pub async fn configure(&mut self) {
+/*    pub async fn configure(&mut self) {
         println!("Power on ICM42670");
         self.write_reg(0x1f, 0x0f).await;
         println!("ICM42680 powered on, verifying identity");
@@ -364,40 +357,40 @@ impl<'a> Icm42670<'a> {
         ];
         self.burst_write_regs(0x20, configuration_data).await;
         println!("ICM42680 configured");
-    }
+    }*/
 
-    pub async fn write_block_reg(&mut self, blk: BlkSel, address: u8, value: u8) {
+    pub async fn write_block_reg(&mut self, blk: BlkSel, address: u8, value: u8) -> Result<(), i2c::master::Error> {
         let block_sel = blk.block_sel_val();
         self.burst_write_regs(0x79, &[block_sel, address]).await;
         // Note, per section 14 of the datasheet we must wait 10us before write,
         // 10us after write, then reset the blk_sel_w is 0 afterward
         let mut d = embassy_time::Delay;
         d.delay_us(10).await;
-        self.write_reg(0x7b, value).await;
+        self.write_reg(0x7b, value).await?;
         d.delay_us(10).await;
-        self.write_reg(0x7a, 0).await;
+        self.write_reg(0x7a, 0).await
     }
 
-    pub async fn read_block_reg(&mut self, blk: BlkSel, address: u8) -> u8 {
+    pub async fn read_block_reg(&mut self, blk: BlkSel, address: u8) -> Result<u8, i2c::master::Error> {
         let block_sel = blk.block_sel_val();
         self.burst_write_regs(0x7C, &[block_sel, address]).await;
         let mut d = embassy_time::Delay;
         d.delay_us(10).await;
-        let read_val = self.read_reg(0x7e).await;
+        let read_val = self.read_reg(0x7e).await?;
         d.delay_us(10).await;
-        self.write_reg(0x7c, 0).await;
-        read_val
+        self.write_reg(0x7c, 0).await?;
+        Ok(read_val)
     }
 
-    pub async fn fifo_configure(&mut self, conf: Config) {
+    pub async fn fifo_configure(&mut self, conf: Config) -> Result<(), i2c::master::Error> {
         let Some(fifo_config) = conf.fifo_config else {
-            return
+            panic!("Need fifo config");
         };
         // Disable anything first?
         let mut conf5_flags = 0;
         if let Some(wm) = fifo_config.watermark {
             let bytes = wm.to_be_bytes();
-            self.burst_write_regs(0x29, &[bytes[1], bytes[0]]).await;
+            self.burst_write_regs(0x29, &[bytes[1], bytes[0]]).await?;
         }
         if conf.accel_config.is_some() {
             conf5_flags |= 1 << 0;
@@ -406,13 +399,13 @@ impl<'a> Icm42670<'a> {
             conf5_flags |= 1 << 1;
         }
         // Enable timestamp.  Possibly essential to avoid bad packets?
-        self.write_block_reg(BlkSel::MREG1, 0x0, 0b01).await;
-        self.write_block_reg(BlkSel::MREG1, 0x1, conf5_flags).await;
+        self.write_block_reg(BlkSel::MREG1, 0x0, 0b01).await?;
+        self.write_block_reg(BlkSel::MREG1, 0x1, conf5_flags).await?;
         // Not using ALP/WUOSC so disable wakeup
-        self.write_block_reg(BlkSel::MREG1, 0x2, 0x1).await;
+        self.write_block_reg(BlkSel::MREG1, 0x2, 0x1).await?;
         // Disable APEX for bigger FIFO
-        self.write_block_reg(BlkSel::MREG1, 0x6, 1 << 6).await;
-        let readback = self.read_block_reg(BlkSel::MREG1, 0x1).await;
+        self.write_block_reg(BlkSel::MREG1, 0x6, 1 << 6).await?;
+        let readback = self.read_block_reg(BlkSel::MREG1, 0x1).await?;
         if readback != conf5_flags {
             println!("Fifo config failed- sent conf val 0x{:x} but read back 0x{:x}", conf5_flags, readback);
         }
@@ -420,16 +413,17 @@ impl<'a> Icm42670<'a> {
         println!("Enabling fifo");
         let mut conf1_flags = 0;
         conf1_flags |= fifo_config.mode.to_bits() << 1;
-        self.write_reg(0x28, conf1_flags).await;
+        self.write_reg(0x28, conf1_flags).await?;
+        Ok(())
     }
 
-    pub async fn configure2(&mut self, conf: Config) {
+    pub async fn configure2(&mut self, conf: Config) -> Result<(), i2c::master::Error> {
         println!("Idle on ICM42670");
-        self.write_reg(0x1f, 0b00010000).await;
+        self.write_reg(0x1f, 0b00010000).await?;
         let mut d = embassy_time::Delay;
         d.delay_us(200).await;
         println!("ICM42680 powered on, verifying identity");
-        let id = self.read_reg(0x75).await;
+        let id = self.read_reg(0x75).await?;
         println!("Got id: 0x{:x}", id);
         if id != 0x67 {
             panic!("Device not identified as icm42760, expected 0x67 but got 0x{:x}", id);
@@ -443,8 +437,9 @@ impl<'a> Icm42670<'a> {
             gyro_cnf.gyro_config1(),
             acc_cnf.accel_config1()
         ];
-        self.burst_write_regs(0x20, configuration_data).await;
-        self.fifo_configure(conf).await;
+        self.burst_write_regs(0x20, configuration_data).await?;
+        self.fifo_configure(conf).await?;
+        Ok(())
     }
 
     pub async fn full_enable(&mut self) {
@@ -453,20 +448,20 @@ impl<'a> Icm42670<'a> {
         d.delay_us(200).await;
     }
 
-    pub async fn flush_fifo(&mut self) {
-        self.write_reg(0x02, 1 << 2).await;
+    pub async fn flush_fifo(&mut self) -> Result<(), i2c::master::Error> {
+        self.write_reg(0x02, 1 << 2).await?;
         embassy_time::Delay.delay_ns(1500).await;
-        let flushed = (self.read_reg(0x02).await & 0b100) == 0;
+        let flushed = (self.read_reg(0x02).await? & 0b100) == 0;
         if !flushed {
             println!("Note, failed to flush fifo");
         }
+        Ok(())
     }
 
     pub async fn read_fifo_packet(&mut self) -> Result<Option<FifoPacket>, i2c::master::Error> {
         let mut buf = [0; 16];
         let portion = &mut buf[0..16];
-        let _ = self.burst_read_regs(0x3f, portion).await.map_err(|e|
-            panic!("Failed to burst read: {:?}", e));
+        let _ = self.burst_read_regs(0x3f, portion).await?;
         debug_println!("Fifo packet: {:?}", portion);
         let header_data = portion[0];
         debug_println!("Header: {header_data}");
@@ -550,6 +545,6 @@ impl Imu for Icm42670<'_> {
     }
 
     async fn flush_msgs(&mut self) {
-        self.flush_fifo().await
+        let _ = self.flush_fifo().await;
     }
 }

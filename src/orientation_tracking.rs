@@ -17,7 +17,7 @@ pub struct OrientationTracker<M: Imu> {
 }
 
 //const DEGREE_SCALING_FACTOR: i32 = 64000;
-const DEGREE_SCALING_FACTOR: i32 = 512;
+const DEGREE_SCALING_FACTOR: i32 = 640;
 const HALVED_DEGREE_SCALING_FACTOR: i32 = DEGREE_SCALING_FACTOR / 2;
 pub fn reading_to_dps_32(reading: i16) -> DegreeFixed32 {
     DegreeFixed32::from_bits(reading as i32) * DEGREE_SCALING_FACTOR
@@ -62,13 +62,22 @@ impl<M: Imu> OrientationTracker<M> {
     }
 
     pub async fn track(&mut self) {
+        let mut err_count = 0;
         loop {
             let msg = match self.imuctl.get_motion_data_msg().await {
                 Ok(m) => m,
                 Err(e) if e.is_not_ready() => {
                     break
                 }
-                Err(e) => panic!("Error in motion data tracking: {:?}", e),
+                Err(e) => {
+                    println!("Orientation tracking got error: {:?}", e);
+                    err_count += 1;
+                    if err_count > 20 {
+                        println!("Orientation tracking got too many errors...");
+                        break
+                    }
+                    continue
+                }
             };
             let timestamp = msg.timestamp;
             let _accel_data = msg.accel_data;

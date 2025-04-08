@@ -206,7 +206,7 @@ async fn main(spawner: Spawner) {
         println!("{i}: {good_packets} packets");
         ticker.next().await;
     }
-    let mut calibrator = ImuCalibrator::<_, 64>::new(imu);
+    let mut calibrator = ImuCalibrator::<_, 1024>::new(imu);
     // Tick the calibrator state machine until it's done
     let mut imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
     let gravmag = imuctl.gravity_mag();
