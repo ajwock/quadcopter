@@ -4,7 +4,7 @@ use esp_hal::ledc::{
 };
 use crate::debug_println;
 use esp_println::println;
-use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, RadianFixed16, to_unity};
+use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, RadianFixed16, to_unity, DegreeFixed32};
 use fixed::FixedI16;
 use fixed::types::extra::U8;
 use fixed_trigonometry::powi;
@@ -32,16 +32,15 @@ pub(crate) struct MotorDrive {
     motors: [[Motor; 2]; 2],
     motor_targets: [[u8; 2]; 2],
     current_drive: [[u8; 2]; 2],
-    attitude_int: [UnityFixed16; 2],
+    attitude_int: [DegreeFixed32; 3],
     gravity_magnitude: RadianFixed16,
-    collective_power: u16,
+    collective_power: DegreeFixed32,
     // Desired tilt and gyre vector, for lateral movement and rotation.
     // Please pre-normalize!
-    target_tilt: [RadianFixed16; 2],
+    target_tilt: [DegreeFixed32; 3],
     previous_acc_error: [UnityFixed16; 3],
     integrated_acc_error: [UnityFixed16; 3],
 }
-
 
 impl MotorDrive {
     pub(crate) fn new(topleft: MotorChannel, topright: MotorChannel, bottomleft: MotorChannel, bottomright: MotorChannel, gravity_magnitude: i16) -> Self {
@@ -49,8 +48,8 @@ impl MotorDrive {
             motors: [[Motor::new(topleft), Motor::new(topright)], [Motor::new(bottomleft), Motor::new(bottomright)]],
             motor_targets: [[0; 2]; 2],
             current_drive: [[0; 2]; 2],
-            attitude_int: [UnityFixed16::from_bits(0); 2],
-            collective_power: 16535,
+            attitude_int: [DegreeFixed32::from_bits(0); 3],
+            collective_power: DegreeFixed32::from_bits(0),
             target_tilt: Default::default(),
             previous_acc_error: Default::default(),
             integrated_acc_error: Default::default(),
@@ -76,44 +75,43 @@ impl MotorDrive {
         const MAX_OUTPUT: u32 = i16::MAX as u32;
         const RATIO: u32 = MAX_OUTPUT / MAX_INPUT;
         let pct_clamped = core::cmp::min(pct, 100);
-        let power_val = pct_clamped as u32 * RATIO;
-        self.collective_power = power_val as u16;
+        self.collective_power = DegreeFixed32::from_num(pct_clamped) / 100;
         debug_println!("Setting collective: {}", self.collective_power);
     }
 
     // PID constants.
-    const ATTITUDE_POSITION: UnityFixed16 = UnityFixed16::from_bits(i16::MAX);
-    const ATTITUDE_INTEGRAL: UnityFixed16 = UnityFixed16::from_bits(0);
-    const ATTITUDE_INTEGRAL_PERTICK: UnityFixed16 = UnityFixed16::from_bits(i16::MAX / 32);
+    const ATTITUDE_POSITION: DegreeFixed32 = DegreeFixed32::ONE;
+    const ATTITUDE_INTEGRAL: DegreeFixed32 = DegreeFixed32::from_bits(0);
+    const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = DegreeFixed32::from_bits(0);
 
-    const ROTATION_POSITION: UnityFixed16 = UnityFixed16::from_bits(i16::MAX);
-    pub(crate) fn attitude_correct(&mut self, data: MotionData) {
+    const ROTATION_POSITION: DegreeFixed32 = DegreeFixed32::ONE;
+    pub(crate) fn attitude_correct_2(&mut self, ) {
+        
+    }
+    pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
 
         // Handle acceleration adjustments
-//        let acc_v = fdata.normalized_acc();
-        let orientation_data: TiltData = data.into();
-        let tilt_v = orientation_data.tilt_vector();
+        let tilt_v = data.map(|x| x / 180);
         debug_println!("xz_tilt, yz_tilt: [{}, {}]", tilt_v[0], tilt_v[1]);
-        debug_println!("accel_magnitude: {}", orientation_data.accel_magnitude);
-        let mag = orientation_data.accel_magnitude;
-        let grav_diff = self.gravity_magnitude.saturating_sub(mag).abs();
-        println!("Gravity_mag vs unity mag: {} vs {}", self.gravity_magnitude, mag);
-        println!("Grav diff: {grav_diff}");
+//        debug_println!("accel_magnitude: {}", orientation_data.accel_magnitude);
+ //       let mag = orientation_data.accel_magnitude;
+  //      let grav_diff = self.gravity_magnitude.saturating_sub(mag).abs();
+  //      println!("Gravity_mag vs unity mag: {} vs {}", self.gravity_magnitude, mag);
+ //       println!("Grav diff: {grav_diff}");
         // Uhhh do we wanna do trig wrap here
-        let err_v_rad: [_; 2] = core::array::from_fn(|i| self.target_tilt[i] - tilt_v[i]);
-        let err_v = err_v_rad.map(|x| to_unity(x));
+       let err_v: [_; 3] = core::array::from_fn(|i| self.target_tilt[i] - tilt_v[i]);
         // Position handling
         //debug_println!("acc_v: {:?}", acc_v);
         //debug_println!("err_v: {:?}", err_v);
-        let mut motor_adjustments = [[UnityFixed16::from_num(0); 2]; 2];
+        let mut motor_adjustments = [[DegreeFixed32::from_num(0); 2]; 2];
         // Motors get power added if craft is tilting towards either of the 4 rectangular edges
         // that the motor sits at the corner to.
                 // Attitude integral error handling
         self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
-        let adj_fn: [_; 2]  = core::array::from_fn(|i| err_v[i] * Self::ATTITUDE_POSITION + self.attitude_int[i] * Self::ATTITUDE_INTEGRAL);
+        let adj_fn: [_; 3]  = core::array::from_fn(|i| err_v[i] * Self::ATTITUDE_POSITION + self.attitude_int[i] * Self::ATTITUDE_INTEGRAL);
 
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_add(adj_fn[1]);
         motor_adjustments[0][1] = motor_adjustments[0][1].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
@@ -122,7 +120,7 @@ impl MotorDrive {
 
         // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
         // corrections should handle xy rotation
-        let rotation_error = UnityFixed16::from_bits(data.gyr_z);
+        let rotation_error = err_v[2];
         let rot_fn = rotation_error * Self::ROTATION_POSITION;
         // Opposite motors have propellers rotating in opposite directions.
         // The rotation error is added to or subtracted from opposite propellers to create torque
@@ -133,18 +131,19 @@ impl MotorDrive {
         motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(rot_fn);
 
 
-        let mut scalers = [[UnityFixed16::from_bits(self.collective_power as i16); 2]; 2];
+        let mut scalers = [[self.collective_power; 2]; 2];
         for i in 0..scalers[0].len() {
             for j in 0..scalers[0].len() {
-                scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).max(UnityFixed16::ZERO);
+                scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).max(DegreeFixed32::ZERO).min(DegreeFixed32::ONE);
             }
         }
-       debug_println!("scalers: {:?}", scalers);
+       println!("scalers: {:?}", scalers);
         for i in 0..scalers[0].len() {
             for j in 0..scalers[1].len() {
                 let s_cast = Cast::<FixedI16<U8>>::cast(scalers[i][j]);
                 let duty_fixed = s_cast * 100;
                 let duty = Cast::<u8>::cast(duty_fixed);
+                
                 self.motor_targets[i][j] = duty;
             }
         }

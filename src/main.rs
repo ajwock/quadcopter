@@ -273,23 +273,24 @@ async fn main(spawner: Spawner) {
     let mut orientation_tracker = OrientationTracker::new(imuctl);
     loop {
         orientation_tracker.track().await;
-        println!("Orientation: {:?}", orientation_tracker.get_orientation());
+        let orientation = orientation_tracker.get_orientation();
+        println!("Orientation: {:?}", orientation);
         if led_tick_reducer == 0 {
             led.toggle()
         }
         led_tick_reducer = (led_tick_reducer + 1) % 30;
 
-/*        IMU_START_READ.signal(());
+//        IMU_START_READ.signal(());
         prev_motiondata.show();
         if collective_pct < 70 && collective_tick_reducer == 0 {
             collective_pct += 1;
         }
         collective_tick_reducer = (collective_tick_reducer + 1) % 20;
         motor_drive.set_collective_pct(collective_pct);
-        motor_drive.attitude_correct(prev_motiondata);
+        motor_drive.attitude_correct(orientation);
         motor_drive.motor_tick();
-        let motion_data = IMU_READ_DONE.wait().await;
-        prev_motiondata = motion_data;*/
+//        let motion_data = IMU_READ_DONE.wait().await;
+//        prev_motiondata = motion_data;*/
         ticker.next().await;
     }
 }
