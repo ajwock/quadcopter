@@ -1,4 +1,4 @@
-20956223749725166
+20978902023712554
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -53613,6 +53613,13 @@ heatsink
 2
 1
 Imported
+0_ohm
+Resistor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator
+resistor
+0
+2
+1
+Imported
 2-bb
 3-Lead TO-92, 0.2 in-line Ammo ver.
 Transistor BJT NPN
@@ -53627,6 +53634,13 @@ Transistor BJT NPN
 3
 3
 Imported
+3-rightangle-smt
+
+
+0
+3
+3
+Imported
 4-bb
 3-Lead TO-92, 0.2 in-line Ammo ver.
 Transistor BJT NPN
@@ -53634,9 +53648,23 @@ Transistor BJT NPN
 4
 4
 Imported
+4-rightangle-smt
+
+
+0
+4
+4
+Imported
 5-bb
 3-Lead TO-92, 0.2 in-line Ammo ver.
 Transistor BJT NPN
+0
+5
+5
+Imported
+5-rightangle-smt
+
+
 0
 5
 5
@@ -53704,6 +53732,13 @@ Capacitor
 2
 2
 Imported
+IIM42352
+14 Lead LGA (2.5x3x0.91)_1
+Accelerometer
+0
+14
+14
+Imported
 LE33CZTR
 TO-92_AMMO
 Integrated Circuit
@@ -53711,12 +53746,33 @@ Integrated Circuit
 3
 3
 Imported
+QFP50P1200X1200X160-64N
+LQF64
+Integrated Circuit
+0
+64
+64
+Imported
 SM6F22AY
 SOD128FLAT
 Schottky Diode
 0
 2
 2
+Imported
+SOD2513X120N
+SOD323_2024-1
+TVS Diode (Bi-directional)
+0
+2
+2
+Imported
+SOIC127P600X175-8N
+8-Pin SOIC 150-mil (Package Code SN)
+Integrated Circuit
+0
+8
+8
 Imported
 SOP64P601X175-16N
 GN Package 16-Lead Plastic SSOP (Narrow 0.150)
@@ -53732,6 +53788,13 @@ MOSFET (N-Channel)
 3
 3
 Imported
+SOT95P280X110-6N
+DDC0006A
+Integrated Circuit
+0
+6
+6
+Imported
 SOT233P700X180-4N
 SOT223_2020
 Integrated Circuit
@@ -53746,12 +53809,33 @@ Integrated Circuit
 3
 3
 Imported
+UJCHP23SMTTR
+UJC-HP2-3-SMT-TR-1
+Connector
+0
+10
+10
+Imported
+USB309030A
+USB3090-30-A-2
+Connector
+0
+9
+9
+Imported
 VN10KN3-G
 
 
 0
 3
 3
+Imported
+armboard_out
+
+
+0
+16
+16
 Imported
 esp32c3_boardout
 
@@ -53766,6 +53850,13 @@ inductor_smt
 0
 2
 2
+Imported
+usb_a_vertical
+
+
+0
+6
+5
 Inductor_SMD
 L_6.3x6.3_H3
 Choke, SMD, 6.3x6.3mm 3mm height
