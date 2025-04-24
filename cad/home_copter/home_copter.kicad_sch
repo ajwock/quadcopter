@@ -3796,7 +3796,7 @@
   (symbol (lib_id "Homebrewed:2pin_header") (at 152.4 35.56 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid 62ba8ca4-b51e-4fee-b36c-ced3d3562acd)
-    (property "Reference" "U?" (id 0) (at 156.21 36.8299 0)
+    (property "Reference" "U16" (id 0) (at 156.21 36.8299 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "2pin_header" (id 1) (at 156.21 39.3699 0)
@@ -4019,7 +4019,7 @@
   (symbol (lib_id "Homebrewed:2pin_header") (at 162.56 58.42 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid 7cdf64c9-c25f-4133-aab3-bc78ab414489)
-    (property "Reference" "U?" (id 0) (at 166.37 59.6899 0)
+    (property "Reference" "U17" (id 0) (at 166.37 59.6899 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "2pin_header" (id 1) (at 166.37 62.2299 0)
@@ -4287,7 +4287,7 @@
   (symbol (lib_id "Device:D_Schottky") (at 162.56 93.98 180) (unit 1)
     (in_bom yes) (on_board yes) (fields_autoplaced)
     (uuid 973ca1d1-3d7c-4220-a222-8bdbdf7d33d7)
-    (property "Reference" "D?" (id 0) (at 162.8775 87.63 0))
+    (property "Reference" "D8" (id 0) (at 162.8775 87.63 0))
     (property "Value" "D_Schottky" (id 1) (at 162.8775 90.17 0))
     (property "Footprint" "Imported:SM6F22AY" (id 2) (at 162.56 93.98 0)
       (effects (font (size 1.27 1.27)) hide)
@@ -5415,7 +5415,7 @@
       (reference "D7") (unit 1) (value "D_Schottky") (footprint "Imported:SM6F22AY")
     )
     (path "/973ca1d1-3d7c-4220-a222-8bdbdf7d33d7"
-      (reference "D?") (unit 1) (value "D_Schottky") (footprint "Imported:SM6F22AY")
+      (reference "D8") (unit 1) (value "D_Schottky") (footprint "Imported:SM6F22AY")
     )
     (path "/09f176d0-9833-4799-ae19-d9e810569567"
       (reference "L1") (unit 1) (value "3.3uH") (footprint "Inductor_SMD:L_0603_1608Metric")
@@ -5529,10 +5529,10 @@
       (reference "U15") (unit 1) (value "2pin_header") (footprint "Imported:2-bb")
     )
     (path "/62ba8ca4-b51e-4fee-b36c-ced3d3562acd"
-      (reference "U?") (unit 1) (value "2pin_header") (footprint "Imported:2-bb")
+      (reference "U16") (unit 1) (value "2pin_header") (footprint "Imported:2-bb")
     )
     (path "/7cdf64c9-c25f-4133-aab3-bc78ab414489"
-      (reference "U?") (unit 1) (value "2pin_header") (footprint "Imported:2-bb")
+      (reference "U17") (unit 1) (value "2pin_header") (footprint "Imported:2-bb")
     )
   )
 )
