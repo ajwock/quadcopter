@@ -5,7 +5,7 @@
       "Application": "Pcbnew",
       "Version": "6.0.11+dfsg-1"
     },
-    "CreationDate": "2025-04-24T15:14:43-04:00"
+    "CreationDate": "2025-04-24T23:53:41-04:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
@@ -44,9 +44,19 @@
       "FilePolarity": "Positive"
     },
     {
-      "Path": "home_copter-Edge_Cuts.gbr",
-      "FileFunction": "Profile",
+      "Path": "home_copter-F_Silkscreen.gbr",
+      "FileFunction": "Legend,Top",
       "FilePolarity": "Positive"
+    },
+    {
+      "Path": "home_copter-F_Mask.gbr",
+      "FileFunction": "SolderMask,Top",
+      "FilePolarity": "Negative"
+    },
+    {
+      "Path": "home_copter-B_Mask.gbr",
+      "FileFunction": "SolderMask,Bot",
+      "FilePolarity": "Negative"
     }
   ],
   "MaterialStackup": [

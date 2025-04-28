@@ -3669,7 +3669,7 @@
     (uuid 608544e6-bb71-4ad0-a807-d7880397185b)
     (property "Reference" "U2" (id 0) (at 93.98 21.59 0))
     (property "Value" "ESP32-C3-MINI-1-H4X" (id 1) (at 93.98 24.13 0))
-    (property "Footprint" "Imported:ESP32C3MINI1H4X" (id 2) (at 68.58 34.29 0)
+    (property "Footprint" "Imported:ESP32C3MINI1H4X_hand_solder" (id 2) (at 68.58 34.29 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "" (id 3) (at 68.58 34.29 0)
@@ -4140,7 +4140,7 @@
     (uuid 85e6dc1d-0713-44b3-8dee-438c88f0b01e)
     (property "Reference" "U1" (id 0) (at 60.325 121.539 0))
     (property "Value" "ICM-42670-P" (id 1) (at 60.325 123.8504 0))
-    (property "Footprint" "Rust_Board:IC_ICM-42670-P" (id 2) (at 63.5 166.37 0)
+    (property "Footprint" "Imported:ICM-42670-hand-solder" (id 2) (at 63.5 166.37 0)
       (effects (font (size 1.27 1.27)) (justify left bottom) hide)
     )
     (property "Datasheet" "" (id 3) (at 64.77 125.73 0)
@@ -5484,10 +5484,10 @@
       (reference "R21") (unit 1) (value "100") (footprint "Resistor_SMD:R_0603_1608Metric")
     )
     (path "/85e6dc1d-0713-44b3-8dee-438c88f0b01e"
-      (reference "U1") (unit 1) (value "ICM-42670-P") (footprint "Rust_Board:IC_ICM-42670-P")
+      (reference "U1") (unit 1) (value "ICM-42670-P") (footprint "Imported:ICM-42670-hand-solder")
     )
     (path "/608544e6-bb71-4ad0-a807-d7880397185b"
-      (reference "U2") (unit 1) (value "ESP32-C3-MINI-1-H4X") (footprint "Imported:ESP32C3MINI1H4X")
+      (reference "U2") (unit 1) (value "ESP32-C3-MINI-1-H4X") (footprint "Imported:ESP32C3MINI1H4X_hand_solder")
     )
     (path "/0bb91467-d5f3-4585-998c-8a1b79651589"
       (reference "U3") (unit 1) (value "LTC3534EGN#PBF") (footprint "Imported:SOP64P601X175-16N")

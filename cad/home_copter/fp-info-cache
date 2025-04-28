@@ -1,4 +1,4 @@
-20978902023712554
+20985884199775099
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -53725,12 +53725,40 @@ Undefined or Miscellaneous
 61
 61
 Imported
+ESP32C3MINI1H4X_copy
+13.2 mm x 16.6 mm x 2.4 mm
+Undefined or Miscellaneous
+0
+61
+61
+Imported
+ESP32C3MINI1H4X_hand_solder
+13.2 mm x 16.6 mm x 2.4 mm
+Undefined or Miscellaneous
+0
+61
+61
+Imported
 GCM033C70J104KE02D
 GCM03
 Capacitor
 0
 2
 2
+Imported
+ICM-42670-hand-solder
+
+
+0
+14
+14
+Imported
+IC_ICM-42670-P
+
+
+0
+14
+14
 Imported
 IIM42352
 14 Lead LGA (2.5x3x0.91)_1
