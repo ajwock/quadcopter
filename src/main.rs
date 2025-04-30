@@ -9,6 +9,7 @@ mod motion_data_angular;
 mod orientation_tracking;
 mod utils;
 mod receiver;
+mod delay_buf;
 
 use orientation_tracking::OrientationTracker;
 use embedded_hal_async::delay::DelayNs;

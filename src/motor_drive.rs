@@ -11,6 +11,7 @@ use fixed_macro::fixed;
 use fixed_trigonometry::powi;
 use az::Cast;
 use crate::utils;
+use crate::delay_buf::DelayBuf;
 
 type MotorChannel = Channel<'static, ledc::LowSpeed>;
 // whoops sorry I guess
@@ -39,6 +40,8 @@ pub(crate) struct MotorDrive {
     // Desired tilt and gyre vector, for lateral movement and rotation.
     // Please pre-normalize!
     target_tilt: [DegreeFixed32; 3],
+    target_tilt_prev_err: [DegreeFixed32; 3],
+    target_tilt_derivative_buf: DelayBuf<[DegreeFixed32; 3], 4>,
     previous_acc_error: [UnityFixed16; 3],
     integrated_acc_error: [UnityFixed16; 3],
 }
@@ -52,13 +55,15 @@ impl MotorDrive {
             attitude_int: [DegreeFixed32::from_bits(0); 3],
             collective_power: DegreeFixed32::from_bits(0),
             target_tilt: Default::default(),
+            target_tilt_prev_err: Default::default(),
+            target_tilt_derivative_buf: DelayBuf::new_with_default(Default::default()),
             previous_acc_error: Default::default(),
             integrated_acc_error: Default::default(),
             gravity_magnitude: RadianFixed16::from_bits(gravity_magnitude),
         }
     }
 
-    const SLEW_CONSTANT_UP: u8 = 2;
+    const SLEW_CONSTANT_UP: u8 = 10;
     const SLEW_CONSTANT_DOWN: u8 = 10;
     // Call this with timed ticks to apply motor slew
     pub(crate) fn motor_tick(&mut self) {
@@ -82,11 +87,14 @@ impl MotorDrive {
     }
 
     // PID constants.
-    const ATTITUDE_POSITION: DegreeFixed32 = DegreeFixed32::ONE; // fixed!(0.5: I12F20);
+    const ATTITUDE_POSITION: DegreeFixed32 = fixed!(0.3: I12F20); // fixed!(0.5: I12F20);
+    const POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
     const ATTITUDE_INTEGRAL: DegreeFixed32 = DegreeFixed32::from_bits(0);
     const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = DegreeFixed32::from_bits(0);
-
-    const ROTATION_POSITION: DegreeFixed32 = DegreeFixed32::ONE;
+    const INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.05: I12F20);
+    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(5: I12F20);
+    const DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
+    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.25: I12F20);
     pub(crate) fn attitude_correct_2(&mut self, ) {
         
     }
@@ -113,7 +121,16 @@ impl MotorDrive {
         self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
-        let adj_fn: [_; 3]  = core::array::from_fn(|i| err_v[i] * Self::ATTITUDE_POSITION + self.attitude_int[i] * Self::ATTITUDE_INTEGRAL);
+        // Low pass the derivative of the error
+        let err_diff = core::array::from_fn(|i| err_v[i] - self.target_tilt_prev_err[i]);
+        self.target_tilt_prev_err = err_v;
+        self.target_tilt_derivative_buf.delay(err_diff);
+        let _err_derivative_sum = self.target_tilt_derivative_buf.iter().fold([DegreeFixed32::ZERO; 3], |acc, x| core::array::from_fn(|i| acc[i] + x[i]));
+//        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_derivative_sum[i] * (100 / 4));
+        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_diff[i] * 100 / 4);
+
+        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::POSITION_CLAMP, Self::POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::INTEGRAL_CLAMP, Self::INTEGRAL_CLAMP) + (avg_err_derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::DERIVATIVE_CLAMP, Self::DERIVATIVE_CLAMP));
+        println!("Avg error derivative: {:?}", avg_err_derivative);
 
         // Frontleft is in the -x, +y region
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
@@ -137,7 +154,7 @@ impl MotorDrive {
         let mut scalers = [[self.collective_power; 2]; 2];
         for i in 0..scalers[0].len() {
             for j in 0..scalers[0].len() {
-                scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).max(DegreeFixed32::ZERO).min(DegreeFixed32::ONE);
+                scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).clamp(DegreeFixed32::ZERO, DegreeFixed32::ONE);
             }
         }
        println!("scalers: {:?}", scalers);
