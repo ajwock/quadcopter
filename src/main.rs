@@ -168,9 +168,27 @@ async fn main(spawner: Spawner) {
     )
     .unwrap()
     .with_sda(peripherals.GPIO10)
-    .with_scl(peripherals.GPIO8)
+    .with_scl(peripherals.GPIO4)
     .into_async();
 
+    // Pull the ad0 pin low.
+    let mut ad0 = Output::new(
+        peripherals.GPIO1,
+        Level::Low,
+        OutputConfig::default(),
+    );
+    ad0.set_low();
+    // Pull the icm42670 'cs' pin low (it's unused for i2c)
+    let mut cs = Output::new(
+        peripherals.GPIO5,
+        Level::High,
+        OutputConfig::default(),
+    );
+    cs.set_high();
+    
+
+    let mut d = embassy_time::Delay;
+    d.delay_us(200).await;
 
     let config = icm42670::Config {
         accel_config: Some(AccelConfig {
@@ -187,7 +205,7 @@ async fn main(spawner: Spawner) {
     };
     let mut imu = Icm42670::new(i2c); 
     let mut ticker = Ticker::every(Duration::from_millis(10));
-    imu.configure2(config).await;
+    imu.configure2(config).await.unwrap();
     imu.full_enable().await;
  
     for i in 0..100 {
@@ -230,13 +248,13 @@ async fn main(spawner: Spawner) {
         duty_pct: 0,
         pin_config: ledc::channel::config::PinConfig::PushPull,
     };
-    let mut frontleft = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO0);
+    let mut frontleft = ledc.channel(ledc::channel::Number::Channel0, peripherals.GPIO2);
     frontleft.configure(common_chanconfig).unwrap();
-    let mut frontright = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO1);
+    let mut frontright = ledc.channel(ledc::channel::Number::Channel1, peripherals.GPIO7);
     frontright.configure(common_chanconfig).unwrap();
-    let mut backleft = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO2);
+    let mut backleft = ledc.channel(ledc::channel::Number::Channel2, peripherals.GPIO3);
     backleft.configure(common_chanconfig).unwrap();
-    let mut backright= ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO3);
+    let mut backright= ledc.channel(ledc::channel::Number::Channel3, peripherals.GPIO6);
     backright.configure(common_chanconfig).unwrap();
     
     // Whoops, need to software rotate the craft 90 degrees to the left
@@ -258,7 +276,7 @@ async fn main(spawner: Spawner) {
     debug_println!("Motor driver set up");
 
     let mut led = Output::new(
-        peripherals.GPIO7,
+        peripherals.GPIO0,
         Level::High,
         OutputConfig::default(),
     );
@@ -282,7 +300,7 @@ async fn main(spawner: Spawner) {
 
 //        IMU_START_READ.signal(());
         prev_motiondata.show();
-        if collective_pct < 70 && collective_tick_reducer == 0 {
+        if collective_pct < 50 && collective_tick_reducer == 0 {
             collective_pct += 1;
         }
         collective_tick_reducer = (collective_tick_reducer + 1) % 20;

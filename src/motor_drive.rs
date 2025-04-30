@@ -7,6 +7,7 @@ use esp_println::println;
 use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, RadianFixed16, to_unity, DegreeFixed32};
 use fixed::FixedI16;
 use fixed::types::extra::U8;
+use fixed_macro::fixed;
 use fixed_trigonometry::powi;
 use az::Cast;
 use crate::utils;
@@ -57,12 +58,13 @@ impl MotorDrive {
         }
     }
 
-    const SLEW_CONSTANT: u8 = 2;
+    const SLEW_CONSTANT_UP: u8 = 2;
+    const SLEW_CONSTANT_DOWN: u8 = 10;
     // Call this with timed ticks to apply motor slew
     pub(crate) fn motor_tick(&mut self) {
         for r in 0..2 {
             for c in 0..2 {
-                self.current_drive[r][c] = utils::rate_limit(self.current_drive[r][c], self.motor_targets[r][c], Self::SLEW_CONSTANT);
+                self.current_drive[r][c] = utils::asymmetrical_rate_limit(self.current_drive[r][c], self.motor_targets[r][c], Self::SLEW_CONSTANT_UP, Self::SLEW_CONSTANT_DOWN);
                 debug_println!("setting motor[{}][{}] duty to {}", r, c, self.current_drive[r][c]);
                 self.motors[r][c].pwm.set_duty(self.current_drive[r][c])
                     .unwrap();
@@ -80,7 +82,7 @@ impl MotorDrive {
     }
 
     // PID constants.
-    const ATTITUDE_POSITION: DegreeFixed32 = DegreeFixed32::ONE;
+    const ATTITUDE_POSITION: DegreeFixed32 = DegreeFixed32::ONE; // fixed!(0.5: I12F20);
     const ATTITUDE_INTEGRAL: DegreeFixed32 = DegreeFixed32::from_bits(0);
     const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = DegreeFixed32::from_bits(0);
 
@@ -113,10 +115,11 @@ impl MotorDrive {
 
         let adj_fn: [_; 3]  = core::array::from_fn(|i| err_v[i] * Self::ATTITUDE_POSITION + self.attitude_int[i] * Self::ATTITUDE_INTEGRAL);
 
-        motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_add(adj_fn[1]);
-        motor_adjustments[0][1] = motor_adjustments[0][1].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
-        motor_adjustments[1][0] = motor_adjustments[1][0].saturating_sub(adj_fn[0]).saturating_add(adj_fn[1]);
-        motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(adj_fn[0]).saturating_sub(adj_fn[1]);
+        // Frontleft is in the -x, +y region
+        motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
+        motor_adjustments[0][1] = motor_adjustments[0][1].saturating_sub(adj_fn[0]).saturating_sub(adj_fn[1]);
+        motor_adjustments[1][0] = motor_adjustments[1][0].saturating_add(adj_fn[0]).saturating_add(adj_fn[1]);
+        motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(adj_fn[0]).saturating_add(adj_fn[1]);
 
         // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
         // corrections should handle xy rotation
