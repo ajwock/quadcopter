@@ -2,6 +2,7 @@ use crate::motion_data::MotionData;
 use smallvec::SmallVec;
 use esp_println::println;
 use embassy_futures;
+use crate::debug_println;
 
 #[derive(Copy, Clone, Debug)]
 pub enum ImuErrorType {
@@ -122,24 +123,24 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
 
     fn init_from_calibration_data(&mut self) -> ImuController<M> {
         let sum_vector = self.calibration_data.iter().map(|x| x.into_vector().map(|y| y as i32))
-            .inspect(|y| println!("y cast: {:?}", y))
+            .inspect(|y| debug_println!("y cast: {:?}", y))
             .fold([0; 6], |acc, v| core::array::from_fn(|i| acc[i] + v[i]));
-        println!("Sum_vector: {:?}", sum_vector);
+        debug_println!("Sum_vector: {:?}", sum_vector);
         let avg_offsets = sum_vector.map(|x| (x / (N as i32)) as i16);
         let raw_offsets = MotionData::from_vector(avg_offsets);
         let magnitude = raw_offsets.acc_magnitude();
         let mut gravity_vector = MotionData::zero();
         gravity_vector.acc_z = magnitude;
         let calib_offsets = gravity_vector - raw_offsets;
-        println!("Gravity vector: {:?}", gravity_vector);
-        println!("raw_offsets: {:?}", raw_offsets);
-        println!("calib_offsets: {:?}", calib_offsets);
+        debug_println!("Gravity vector: {:?}", gravity_vector);
+        debug_println!("raw_offsets: {:?}", raw_offsets);
+        debug_println!("calib_offsets: {:?}", calib_offsets);
         let calib_acc_magnitude = calib_offsets.acc_magnitude();
         if calib_acc_magnitude > 1000 {
             panic!("Calibration failed- offset magnitude {} > 1000.  Ensure the device is on a level surface", calib_acc_magnitude);
         }
-        println!("Note: Calibration offset magnitude: {}", calib_acc_magnitude);
-        println!("Calibration data: {:?}, calibration_offsets: {:?}", self.calibration_data, calib_offsets);
+        debug_println!("Note: Calibration offset magnitude: {}", calib_acc_magnitude);
+        debug_println!("Calibration data: {:?}, calibration_offsets: {:?}", self.calibration_data, calib_offsets);
         ImuController::new(self.imu_holder.take().unwrap())
             .with_calibration(calib_offsets)
             .with_gravmag(magnitude)

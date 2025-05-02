@@ -105,16 +105,8 @@ impl MotorDrive {
         // Handle acceleration adjustments
         let tilt_v = data.map(|x| x / 180);
         debug_println!("xz_tilt, yz_tilt: [{}, {}]", tilt_v[0], tilt_v[1]);
-//        debug_println!("accel_magnitude: {}", orientation_data.accel_magnitude);
- //       let mag = orientation_data.accel_magnitude;
-  //      let grav_diff = self.gravity_magnitude.saturating_sub(mag).abs();
-  //      println!("Gravity_mag vs unity mag: {} vs {}", self.gravity_magnitude, mag);
- //       println!("Grav diff: {grav_diff}");
         // Uhhh do we wanna do trig wrap here
-       let err_v: [_; 3] = core::array::from_fn(|i| self.target_tilt[i] - tilt_v[i]);
-        // Position handling
-        //debug_println!("acc_v: {:?}", acc_v);
-        //debug_println!("err_v: {:?}", err_v);
+        let err_v: [_; 3] = core::array::from_fn(|i| self.target_tilt[i] - tilt_v[i]);
         let mut motor_adjustments = [[DegreeFixed32::from_num(0); 2]; 2];
         // Motors get power added if craft is tilting towards either of the 4 rectangular edges
         // that the motor sits at the corner to.
@@ -152,7 +144,7 @@ impl MotorDrive {
                 scalers[i][j] = scalers[i][j].saturating_add(motor_adjustments[i][j]).clamp(DegreeFixed32::ZERO, DegreeFixed32::ONE);
             }
         }
-       println!("scalers: {:?}", scalers);
+       debug_println!("scalers: {:?}", scalers);
         for i in 0..scalers[0].len() {
             for j in 0..scalers[1].len() {
                 let s_cast = Cast::<FixedI16<U8>>::cast(scalers[i][j]);

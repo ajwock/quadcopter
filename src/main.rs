@@ -287,24 +287,50 @@ async fn main(spawner: Spawner) {
     let mut collective_pct = 0;
     let mut collective_tick_reducer = 0;
     let mut led_tick_reducer = 0;
+    let mut flight_state = AutoFlightState::Rising;
+    let mut steady_ticks = 0;
 
     imuctl.flush_msgs().await;
     let mut orientation_tracker = OrientationTracker::new(imuctl);
     loop {
         orientation_tracker.track().await;
         let orientation = orientation_tracker.get_orientation();
-        println!("Orientation: {:?}", orientation);
+        debug_println!("Orientation: {:?}", orientation);
         if led_tick_reducer == 0 {
             led.toggle()
         }
         led_tick_reducer = (led_tick_reducer + 1) % 30;
 
+        match flight_state {
+            AutoFlightState::Rising => {
+                if collective_pct >= 45 {
+                    flight_state = AutoFlightState::Steady;
+                }
+                if collective_tick_reducer == 0 {
+                    collective_pct += 1;
+                }
+                debug_println!("Rising collective: {}", collective_pct);
+                debug_println!("Rising collective_tick_reducer: {}", collective_tick_reducer);
+                collective_tick_reducer = (collective_tick_reducer + 1) % 4;
+            },
+            AutoFlightState::Steady => {
+                debug_println!("Steady ticks: {}", steady_ticks);
+                if steady_ticks == 60 {
+                    flight_state = AutoFlightState::Falling;
+                }
+                steady_ticks += 1;
+            },
+            AutoFlightState::Falling => {
+                debug_println!("Falling collective: {}", collective_pct);
+                if collective_pct > 0 && collective_tick_reducer == 0{
+                    collective_pct -= 1;
+                }
+                collective_tick_reducer = (collective_tick_reducer + 1) % 12;
+            },
+        }
+        debug_println!("collective_pct: {}", collective_pct);
 //        IMU_START_READ.signal(());
         prev_motiondata.show();
-        if collective_pct < 50 && collective_tick_reducer == 0 {
-            collective_pct += 1;
-        }
-        collective_tick_reducer = (collective_tick_reducer + 1) % 20;
         motor_drive.set_collective_pct(collective_pct);
         motor_drive.attitude_correct(orientation);
         motor_drive.motor_tick();
@@ -312,6 +338,12 @@ async fn main(spawner: Spawner) {
 //        prev_motiondata = motion_data;*/
         ticker.next().await;
     }
+}
+
+enum AutoFlightState {
+    Rising,
+    Steady,
+    Falling,
 }
 
 #[embassy_executor::task]
