@@ -315,7 +315,7 @@ async fn main(spawner: Spawner) {
             },
             AutoFlightState::Steady => {
                 debug_println!("Steady ticks: {}", steady_ticks);
-                if steady_ticks == 60 {
+                if steady_ticks == 120 {
                     flight_state = AutoFlightState::Falling;
                 }
                 steady_ticks += 1;
@@ -325,7 +325,7 @@ async fn main(spawner: Spawner) {
                 if collective_pct > 0 && collective_tick_reducer == 0{
                     collective_pct -= 1;
                 }
-                collective_tick_reducer = (collective_tick_reducer + 1) % 12;
+                collective_tick_reducer = (collective_tick_reducer + 1) % 16;
             },
         }
         debug_println!("collective_pct: {}", collective_pct);
