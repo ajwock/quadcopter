@@ -127,7 +127,7 @@ impl MotorDrive {
         self.target_tilt_derivative_buf.delay(err_diff);
         let _err_derivative_sum = self.target_tilt_derivative_buf.iter().fold([DegreeFixed32::ZERO; 3], |acc, x| core::array::from_fn(|i| acc[i] + x[i]));
 //        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_derivative_sum[i] * (100 / 4));
-        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_diff[i] * 100 / 4);
+        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_diff[i] * 100);
 
         let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::POSITION_CLAMP, Self::POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::INTEGRAL_CLAMP, Self::INTEGRAL_CLAMP) + (avg_err_derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::DERIVATIVE_CLAMP, Self::DERIVATIVE_CLAMP));
         println!("Avg error derivative: {:?}", avg_err_derivative);
