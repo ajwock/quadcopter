@@ -40,7 +40,8 @@ pub(crate) struct MotorDrive {
     // Desired tilt and gyre vector, for lateral movement and rotation.
     // Please pre-normalize!
     target_tilt: [DegreeFixed32; 3],
-    target_tilt_prev_err: [DegreeFixed32; 3],
+    // For orientation-based derivative factor
+    previous_orientation: [DegreeFixed32; 3],
     target_tilt_derivative_buf: DelayBuf<[DegreeFixed32; 3], 4>,
     previous_acc_error: [UnityFixed16; 3],
     integrated_acc_error: [UnityFixed16; 3],
@@ -55,8 +56,8 @@ impl MotorDrive {
             attitude_int: [DegreeFixed32::from_bits(0); 3],
             collective_power: DegreeFixed32::from_bits(0),
             target_tilt: Default::default(),
-            target_tilt_prev_err: Default::default(),
             target_tilt_derivative_buf: DelayBuf::new_with_default(Default::default()),
+            previous_orientation: Default::default(),
             previous_acc_error: Default::default(),
             integrated_acc_error: Default::default(),
             gravity_magnitude: RadianFixed16::from_bits(gravity_magnitude),
@@ -121,16 +122,10 @@ impl MotorDrive {
         self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
-        // Low pass the derivative of the error
-        let err_diff = core::array::from_fn(|i| err_v[i] - self.target_tilt_prev_err[i]);
-        self.target_tilt_prev_err = err_v;
-        self.target_tilt_derivative_buf.delay(err_diff);
-        let _err_derivative_sum = self.target_tilt_derivative_buf.iter().fold([DegreeFixed32::ZERO; 3], |acc, x| core::array::from_fn(|i| acc[i] + x[i]));
-//        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_derivative_sum[i] * (100 / 4));
-        let avg_err_derivative: [_; 3] = core::array::from_fn(|i| err_diff[i] * 100);
+        let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
+        self.previous_orientation = tilt_v;
 
-        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::POSITION_CLAMP, Self::POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::INTEGRAL_CLAMP, Self::INTEGRAL_CLAMP) + (avg_err_derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::DERIVATIVE_CLAMP, Self::DERIVATIVE_CLAMP));
-        println!("Avg error derivative: {:?}", avg_err_derivative);
+        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::POSITION_CLAMP, Self::POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::INTEGRAL_CLAMP, Self::INTEGRAL_CLAMP) + (derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::DERIVATIVE_CLAMP, Self::DERIVATIVE_CLAMP));
 
         // Frontleft is in the -x, +y region
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
