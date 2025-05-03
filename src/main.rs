@@ -59,7 +59,10 @@ use icm42670::{
 use motion_data::MotionData;
 use embassy_sync::{
     signal::Signal,
-    blocking_mutex::raw::CriticalSectionRawMutex,
+    mutex::Mutex,
+    blocking_mutex::raw::{
+        CriticalSectionRawMutex,
+    },
 };
 use esp_wifi::{
     wifi::{
@@ -74,14 +77,54 @@ use esp_wifi::{
     EspWifiController,
 };
 use motor_drive::MotorDrive;
-use edge_nal::UdpBind;
+use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU8};
 
-use imu_common::{Imu, ImuCalibrator, ImuController};
+use imu_common::{Imu, ImuCalibrator};
 
 extern crate alloc;
 
-static IMU_START_READ: Signal<CriticalSectionRawMutex, ()> = Signal::new();
-static IMU_READ_DONE: Signal<CriticalSectionRawMutex, MotionData> = Signal::new();
+#[derive(Copy, Clone, Debug)]
+pub struct ControlVals {
+    pub tilt_x: i8,
+    pub tilt_y: i8,
+    pub rot_z: i8,
+    pub collective: u8,
+}
+
+pub struct Controls {
+    pub tilt_x: AtomicI8,
+    pub tilt_y: AtomicI8,
+    pub rot_z: AtomicI8,
+    pub collective: AtomicU8,
+}
+
+impl Controls {
+    fn get_vals(&self) -> ControlVals {
+        ControlVals {
+            tilt_x: self.tilt_x.load(Ordering::Relaxed),
+            tilt_y: self.tilt_y.load(Ordering::Relaxed),
+            rot_z: self.rot_z.load(Ordering::Relaxed),
+            collective: self.collective.load(Ordering::Relaxed),
+        }
+    }
+
+    fn update(&self, vals: ControlVals) {
+        self.tilt_x.store(vals.tilt_x, Ordering::Relaxed);
+        self.tilt_y.store(vals.tilt_y, Ordering::Relaxed);
+        self.rot_z.store(vals.rot_z, Ordering::Relaxed);
+        self.collective.store(vals.collective, Ordering::Relaxed);
+    }
+}
+
+static CONTROLS: Controls = Controls {
+    tilt_x: AtomicI8::new(0),
+    tilt_y: AtomicI8::new(0),
+    rot_z: AtomicI8::new(0),
+    collective: AtomicU8::new(0),
+};
+
+static CONTROLLER_CONNECTED: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+static CONTROLLER_DISCONNECTED: AtomicBool = AtomicBool::new(false);
 
 macro_rules! mk_static {
     ($t:ty,$val:expr) => {{
@@ -90,15 +133,6 @@ macro_rules! mk_static {
         let x = STATIC_CELL.uninit().write(($val));
         x
     }};
-}
-
-#[embassy_executor::task]
-async fn imu_read_task(mut imu: ImuController<Icm42670<'static>>) {
-    loop {
-        IMU_START_READ.wait().await;
-        let motion_data = imu.read_motion_data().await;
-        IMU_READ_DONE.signal(motion_data);
-    }
 }
 
 #[esp_hal_embassy::main]
@@ -149,7 +183,7 @@ async fn main(spawner: Spawner) {
 
     let net_seed = rng.random() as u64;
     let (stack, runner) = embassy_net::new(
-        interfaces.sta,
+        interfaces.ap,
         config,
         mk_static!(StackResources<3>, StackResources::<3>::new()),
         net_seed,
@@ -160,7 +194,21 @@ async fn main(spawner: Spawner) {
     spawner.spawn(run_dhcp(stack, gw_ip_addr_str)).unwrap();
     spawner.spawn(manage_receiver_connection(stack, gw_ip_addr_str)).unwrap();
 
+    loop {
+        if stack.is_link_up() {
+            break;
+        }
+        Timer::after(Duration::from_millis(200)).await;
+    }
+
+
+    CONTROLLER_CONNECTED.wait().await;
     /* IMU SETUP */
+    let mut conn_led = Output::new(
+        peripherals.GPIO8,
+        Level::Low,
+        OutputConfig::default(),
+    );
 
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
@@ -229,9 +277,6 @@ async fn main(spawner: Spawner) {
     // Tick the calibrator state machine until it's done
     let mut imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
     let gravmag = imuctl.gravity_mag();
-//    spawner
-//        .spawn(imu_read_task(imuctl)).unwrap();
-    /* PWM / MOTOR DRIVER SETUP */
 
     debug_println!("Initializing motor pwms");
     let mut ledc = Ledc::new(peripherals.LEDC);
@@ -278,102 +323,45 @@ async fn main(spawner: Spawner) {
 
     let mut led = Output::new(
         peripherals.GPIO0,
-        Level::High,
+        Level::Low,
         OutputConfig::default(),
     );
 
     let _ = spawner;
-    let mut prev_motiondata = MotionData::zero();
-    let mut collective_pct = 0;
-    let mut collective_tick_reducer = 0;
-    let mut led_tick_reducer = 0;
-    let mut flight_state = AutoFlightState::Rising;
-    let mut steady_ticks = 0;
-
     imuctl.flush_msgs().await;
     let mut orientation_tracker = OrientationTracker::new(imuctl);
+    let mut led_tick_reducer = 0;
     loop {
+        if led_tick_reducer == 20 {
+            led.toggle();
+            conn_led.toggle();
+            led_tick_reducer = 0;
+        } else {
+            led_tick_reducer += 1;
+        }
+        if CONTROLLER_DISCONNECTED.load(Ordering::Relaxed) {
+            motor_drive.cut_motors();
+            panic!("Controller disconnected");
+        }
         orientation_tracker.track().await;
         let orientation = orientation_tracker.get_orientation();
         debug_println!("Orientation: {:?}", orientation);
-        if led_tick_reducer == 0 {
-            led.toggle()
-        }
-        led_tick_reducer = (led_tick_reducer + 1) % 30;
-
-        match flight_state {
-            AutoFlightState::Rising => {
-                if collective_pct >= 47 {
-                    flight_state = AutoFlightState::Steady;
-                }
-                if collective_tick_reducer == 0 {
-                    collective_pct += 1;
-                }
-                debug_println!("Rising collective: {}", collective_pct);
-                debug_println!("Rising collective_tick_reducer: {}", collective_tick_reducer);
-                collective_tick_reducer = (collective_tick_reducer + 1) % 4;
-            },
-            AutoFlightState::Steady => {
-                debug_println!("Steady ticks: {}", steady_ticks);
-                if steady_ticks == 120 {
-                    flight_state = AutoFlightState::Falling;
-                    steady_ticks = 0;
-                }
-                steady_ticks += 1;
-            },
-            AutoFlightState::Falling => {
-                debug_println!("Falling collective: {}", collective_pct);
-                if collective_pct <= 40 {
-                    flight_state = AutoFlightState::Descent;
-                }
-                if collective_tick_reducer == 0 {
-                    collective_pct -= 1;
-                }
-                collective_tick_reducer = (collective_tick_reducer + 1) % 8;
-            },
-            AutoFlightState::Descent => {
-                debug_println!("Descent collective: {}", collective_pct);
-                debug_println!("Descent ticks: {}", steady_ticks);
-                if steady_ticks == 400 {
-                    flight_state = AutoFlightState::Shutoff;
-                    steady_ticks = 0;
-                }
-                steady_ticks += 1;
-            },
-            AutoFlightState::Shutoff => {
-                debug_println!("Shutoff collective: {}", collective_pct);
-                if collective_pct > 0 && collective_tick_reducer == 0 {
-                    collective_pct -= 1;
-                }
-                collective_tick_reducer = (collective_tick_reducer + 1) % 16;
-            }
-        }
-        debug_println!("collective_pct: {}", collective_pct);
-//        IMU_START_READ.signal(());
-        prev_motiondata.show();
-        motor_drive.set_collective_pct(collective_pct);
+        let control_vals = CONTROLS.get_vals();
+        motor_drive.set_collective_pct(control_vals.collective);
+        debug_println!("Collective: {}", control_vals.collective);
         motor_drive.attitude_correct(orientation);
         motor_drive.motor_tick();
-//        let motion_data = IMU_READ_DONE.wait().await;
-//        prev_motiondata = motion_data;*/
         ticker.next().await;
     }
-}
-
-enum AutoFlightState {
-    Rising,
-    Steady,
-    Falling,
-    Descent,
-    Shutoff,
 }
 
 #[embassy_executor::task]
 async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static str) {
     let mut rx_buffer = [0; 2048];
     let mut tx_buffer = [0; 2048];
-    let mut sock = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
+    debug_println!("Receiver connection management up");
     loop {
+        let mut sock = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
         debug_println!("Waiting for connection...");
         if let Err(e) = sock
             .accept(IpListenEndpoint {
@@ -384,19 +372,35 @@ async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static 
             debug_println!("Socket connection error in control loop, continuing: {:?}", e);
             continue
         }
+        CONTROLLER_CONNECTED.signal(());
+        debug_println!("Got tcp connection");
         use embedded_io_async::Write;
-        let mut buf = [0u8; 1024];
+        let mut buf = [0u8; 4];
         loop {
             match sock.read(&mut buf).await {
                 Ok(0) => {
                     debug_println!("Client connection closed.");
+                    CONTROLLER_DISCONNECTED.store(true, Ordering::Relaxed);
                     break
                 }
                 Ok(len) => {
+                    if len != 4 {
+                        debug_println!("Got bad packet length: {}", len);
+                        continue
+                    }
                     debug_println!("Got packet: {:?}", &buf[0..len]);
+                    let vals = ControlVals {
+                        tilt_x: buf[0] as i8,
+                        tilt_y: buf[1] as i8,
+                        rot_z: buf[2] as i8,
+                        collective: buf[3],
+                    };
+                    CONTROLS.update(vals);
+                    debug_println!("Updated controls: {:?}", vals);
                 }
                 Err(e) => {
                     debug_println!("Read error in control loop: {:?}", e);
+                    CONTROLLER_DISCONNECTED.store(true, Ordering::Relaxed);
                     break
                 }
             }
@@ -453,16 +457,21 @@ async fn manage_ap_connection(mut controller: WifiController<'static>) {
             WifiState::ApStarted => {
                 // wait until we're no longer connected
                 controller.wait_for_event(WifiEvent::ApStop).await;
-                Timer::after(Duration::from_millis(5000)).await
+                Timer::after(Duration::from_millis(100)).await
             }
             _ => {}
         }
         if !matches!(controller.is_started(), Ok(true)) {
-            let client_config = Configuration::AccessPoint(AccessPointConfiguration {
-                ssid: "esp-wifi".try_into().unwrap(),
-                ..Default::default()
-            });
-            controller.set_configuration(&client_config).unwrap();
+            let wifi_config = esp_wifi::wifi::Configuration::AccessPoint(
+                AccessPointConfiguration {
+                    ssid: "esp_quad_wifi".try_into().unwrap(),
+                    ssid_hidden: false,
+                    auth_method: AuthMethod::WPA2Personal,
+                    password: "rofl1337".try_into().unwrap(),
+                    ..Default::default()
+                }
+            );
+            controller.set_configuration(&wifi_config).unwrap();
             println!("Starting wifi");
             controller.start_async().await.unwrap();
             println!("Wifi started!");

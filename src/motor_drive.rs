@@ -37,6 +37,7 @@ pub(crate) struct MotorDrive {
     attitude_int: [DegreeFixed32; 3],
     gravity_magnitude: RadianFixed16,
     collective_power: DegreeFixed32,
+    collective_target: DegreeFixed32,
     // Desired tilt and gyre vector, for lateral movement and rotation.
     // Please pre-normalize!
     target_tilt: [DegreeFixed32; 3],
@@ -55,6 +56,7 @@ impl MotorDrive {
             current_drive: [[0; 2]; 2],
             attitude_int: [DegreeFixed32::from_bits(0); 3],
             collective_power: DegreeFixed32::from_bits(0),
+            collective_target: DegreeFixed32::from_bits(0),
             target_tilt: Default::default(),
             target_tilt_derivative_buf: DelayBuf::new_with_default(Default::default()),
             previous_orientation: Default::default(),
@@ -66,8 +68,12 @@ impl MotorDrive {
 
     const SLEW_CONSTANT_UP: u8 = 10;
     const SLEW_CONSTANT_DOWN: u8 = 10;
+    const COLLECTIVE_SLEW_UP: DegreeFixed32 = fixed!(0.01: I12F20);
+    const COLLECTIVE_SLEW_DOWN: DegreeFixed32 = fixed!(0.2: I12F20);
     // Call this with timed ticks to apply motor slew
     pub(crate) fn motor_tick(&mut self) {
+        self.collective_power = utils::asymmetrical_rate_limit(self.collective_power, self.collective_target, Self::COLLECTIVE_SLEW_UP, Self::COLLECTIVE_SLEW_DOWN);
+        debug_println!("Actual collective: {}", self.collective_power * 100);
         for r in 0..2 {
             for c in 0..2 {
                 self.current_drive[r][c] = utils::asymmetrical_rate_limit(self.current_drive[r][c], self.motor_targets[r][c], Self::SLEW_CONSTANT_UP, Self::SLEW_CONSTANT_DOWN);
@@ -92,8 +98,8 @@ impl MotorDrive {
         const MAX_OUTPUT: u32 = i16::MAX as u32;
         const RATIO: u32 = MAX_OUTPUT / MAX_INPUT;
         let pct_clamped = core::cmp::min(pct, 100);
-        self.collective_power = DegreeFixed32::from_num(pct_clamped) / 100;
-        debug_println!("Setting collective: {}", self.collective_power);
+        self.collective_target = DegreeFixed32::from_num(pct_clamped) / 100;
+        debug_println!("Setting collective: {}", self.collective_target);
     }
 
     // PID constants.
