@@ -303,7 +303,7 @@ async fn main(spawner: Spawner) {
 
         match flight_state {
             AutoFlightState::Rising => {
-                if collective_pct >= 45 {
+                if collective_pct >= 47 {
                     flight_state = AutoFlightState::Steady;
                 }
                 if collective_tick_reducer == 0 {
@@ -323,7 +323,7 @@ async fn main(spawner: Spawner) {
             },
             AutoFlightState::Falling => {
                 debug_println!("Falling collective: {}", collective_pct);
-                if collective_pct <= 35 {
+                if collective_pct <= 40 {
                     flight_state = AutoFlightState::Descent;
                 }
                 if collective_tick_reducer == 0 {
@@ -334,7 +334,7 @@ async fn main(spawner: Spawner) {
             AutoFlightState::Descent => {
                 debug_println!("Descent collective: {}", collective_pct);
                 debug_println!("Descent ticks: {}", steady_ticks);
-                if steady_ticks == 500 {
+                if steady_ticks == 400 {
                     flight_state = AutoFlightState::Shutoff;
                     steady_ticks = 0;
                 }
@@ -446,8 +446,8 @@ async fn run_dhcp(stack: Stack<'static>, gw_ip_addr: &'static str) {
 
 #[embassy_executor::task(pool_size=10)]
 async fn manage_ap_connection(mut controller: WifiController<'static>) {
-    debug_println!("start connection task");
-    debug_println!("Device capabilities: {:?}", controller.capabilities());
+    println!("start connection task");
+    println!("Device capabilities: {:?}", controller.capabilities());
     loop {
         match esp_wifi::wifi::wifi_state() {
             WifiState::ApStarted => {
@@ -463,9 +463,9 @@ async fn manage_ap_connection(mut controller: WifiController<'static>) {
                 ..Default::default()
             });
             controller.set_configuration(&client_config).unwrap();
-            debug_println!("Starting wifi");
+            println!("Starting wifi");
             controller.start_async().await.unwrap();
-            debug_println!("Wifi started!");
+            println!("Wifi started!");
         }
     }
 }
