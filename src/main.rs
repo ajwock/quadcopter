@@ -317,16 +317,36 @@ async fn main(spawner: Spawner) {
                 debug_println!("Steady ticks: {}", steady_ticks);
                 if steady_ticks == 120 {
                     flight_state = AutoFlightState::Falling;
+                    steady_ticks = 0;
                 }
                 steady_ticks += 1;
             },
             AutoFlightState::Falling => {
                 debug_println!("Falling collective: {}", collective_pct);
-                if collective_pct > 0 && collective_tick_reducer == 0{
+                if collective_pct <= 35 {
+                    flight_state = AutoFlightState::Descent;
+                }
+                if collective_tick_reducer == 0 {
+                    collective_pct -= 1;
+                }
+                collective_tick_reducer = (collective_tick_reducer + 1) % 8;
+            },
+            AutoFlightState::Descent => {
+                debug_println!("Descent collective: {}", collective_pct);
+                debug_println!("Descent ticks: {}", steady_ticks);
+                if steady_ticks == 500 {
+                    flight_state = AutoFlightState::Shutoff;
+                    steady_ticks = 0;
+                }
+                steady_ticks += 1;
+            },
+            AutoFlightState::Shutoff => {
+                debug_println!("Shutoff collective: {}", collective_pct);
+                if collective_pct > 0 && collective_tick_reducer == 0 {
                     collective_pct -= 1;
                 }
                 collective_tick_reducer = (collective_tick_reducer + 1) % 16;
-            },
+            }
         }
         debug_println!("collective_pct: {}", collective_pct);
 //        IMU_START_READ.signal(());
@@ -344,6 +364,8 @@ enum AutoFlightState {
     Rising,
     Steady,
     Falling,
+    Descent,
+    Shutoff,
 }
 
 #[embassy_executor::task]

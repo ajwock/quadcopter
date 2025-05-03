@@ -78,6 +78,15 @@ impl MotorDrive {
         }
     }
 
+    pub(crate) fn cut_motors(&mut self) {
+        for r in 0..2 {
+            for c in 0..2 {
+                self.motors[r][c].pwm.set_duty(0).unwrap();
+            }
+        }
+        println!("Motors cut");
+    }
+
     pub(crate) fn set_collective_pct(&mut self, pct: u8) {
         const MAX_INPUT: u32 = 100;
         const MAX_OUTPUT: u32 = i16::MAX as u32;
@@ -89,18 +98,27 @@ impl MotorDrive {
 
     // PID constants.
     const ATTITUDE_POSITION: DegreeFixed32 = fixed!(0.3: I12F20); // fixed!(0.5: I12F20);
-    const POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
+    const ATTITUDE_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
     const ATTITUDE_INTEGRAL: DegreeFixed32 = fixed!(0.15: I12F20);
     const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = fixed!(0.05: I12F20);
-    const INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
+    const ATTITUDE_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
     const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(5: I12F20);
-    const DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
+    const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
+
     const ROTATION_POSITION: DegreeFixed32 = fixed!(0.25: I12F20);
+    const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
+    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(5: I12F20);
+    const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
     pub(crate) fn attitude_correct_2(&mut self, ) {
         
     }
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
+        if data[0].abs() > 45 || data[1].abs() > 45 {
+            self.cut_motors();
+            panic!("Over tilt limit, power cut.  Orientation: {:?}", data);
+        }
+
 
         // Handle acceleration adjustments
         let tilt_v = data.map(|x| x / 180);
@@ -117,7 +135,7 @@ impl MotorDrive {
         let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
         self.previous_orientation = tilt_v;
 
-        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::POSITION_CLAMP, Self::POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::INTEGRAL_CLAMP, Self::INTEGRAL_CLAMP) + (derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::DERIVATIVE_CLAMP, Self::DERIVATIVE_CLAMP));
+        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::ATTITUDE_POSITION_CLAMP, Self::ATTITUDE_POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::ATTITUDE_INTEGRAL_CLAMP, Self::ATTITUDE_INTEGRAL_CLAMP) + (derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::ATTITUDE_DERIVATIVE_CLAMP, Self::ATTITUDE_DERIVATIVE_CLAMP));
 
         // Frontleft is in the -x, +y region
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
@@ -128,7 +146,8 @@ impl MotorDrive {
         // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
         // corrections should handle xy rotation
         let rotation_error = err_v[2];
-        let rot_fn = rotation_error * Self::ROTATION_POSITION;
+        let rotation_derivative = -tilt_v[2];
+        let rot_fn = (rotation_error * Self::ROTATION_POSITION).clamp(-Self::ROTATION_POSITION_CLAMP, Self::ROTATION_POSITION_CLAMP) + (rotation_derivative * Self::ROTATION_DERIVATIVE).clamp(-Self::ROTATION_DERIVATIVE_CLAMP, Self::ROTATION_DERIVATIVE_CLAMP);
         // Opposite motors have propellers rotating in opposite directions.
         // The rotation error is added to or subtracted from opposite propellers to create torque
         // in one direction about the z axis without significantly influencing attitude.
