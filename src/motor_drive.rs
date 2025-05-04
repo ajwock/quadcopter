@@ -80,9 +80,10 @@ impl MotorDrive {
                     .unwrap();
             }
         }
-        for i in 0..3 {
+/*        for i in 0..3 {
             self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(0.003: I12F20));
-        }
+        }*/
+        self.target_tilt = self.target_tilt_target;
     }
 
     pub(crate) fn cut_motors(&mut self) {
@@ -132,15 +133,20 @@ impl MotorDrive {
 
 
         // Handle acceleration adjustments
+        let target_tilt_mapped = self.target_tilt.map(|x| x / 180);
         let tilt_v = data.map(|x| x / 180);
         debug_println!("xz_tilt, yz_tilt: [{}, {}]", tilt_v[0], tilt_v[1]);
         // Uhhh do we wanna do trig wrap here
-        let err_v: [_; 3] = core::array::from_fn(|i| self.target_tilt[i] - tilt_v[i]);
+        let err_v: [_; 3] = core::array::from_fn(|i| target_tilt_mapped[i] - tilt_v[i]);
+        debug_println!("Orientation error: {:?}", err_v);
         let mut motor_adjustments = [[DegreeFixed32::from_num(0); 2]; 2];
         // Motors get power added if craft is tilting towards either of the 4 rectangular edges
         // that the motor sits at the corner to.
                 // Attitude integral error handling
-        self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
+        // Avoid changing integral while not trying to hover
+        if target_tilt_mapped[0] == DegreeFixed32::ZERO && target_tilt_mapped[1] == DegreeFixed32::ZERO {
+            self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
+        }
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
         let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
@@ -153,7 +159,7 @@ impl MotorDrive {
         motor_adjustments[0][1] = motor_adjustments[0][1].saturating_sub(adj_fn[0]).saturating_sub(adj_fn[1]);
         motor_adjustments[1][0] = motor_adjustments[1][0].saturating_add(adj_fn[0]).saturating_add(adj_fn[1]);
         motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(adj_fn[0]).saturating_add(adj_fn[1]);
-
+        debug_println!("Motor_adjustments (no gyro): {:?}", motor_adjustments);
         // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
         // corrections should handle xy rotation
         let rotation_error = err_v[2];
