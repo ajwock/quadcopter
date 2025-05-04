@@ -11,6 +11,8 @@ mod utils;
 mod receiver;
 mod delay_buf;
 
+use motion_data::DegreeFixed32;
+use fixed_macro::fixed;
 use orientation_tracking::OrientationTracker;
 use embedded_hal_async::delay::DelayNs;
 use esp_println::println;
@@ -348,11 +350,19 @@ async fn main(spawner: Spawner) {
         debug_println!("Orientation: {:?}", orientation);
         let control_vals = CONTROLS.get_vals();
         motor_drive.set_collective_pct(control_vals.collective);
+        let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];
+        debug_println!("Target tilt: {:?}", tilt_ctrl);
+        motor_drive.set_target_tilt(tilt_ctrl);
         debug_println!("Collective: {}", control_vals.collective);
         motor_drive.attitude_correct(orientation);
         motor_drive.motor_tick();
         ticker.next().await;
     }
+}
+
+const TILT_SCALE: DegreeFixed32 = fixed!(0.04: I12F20);
+fn xy_tilt_input_xlat(input: i8) -> DegreeFixed32 {
+    TILT_SCALE * (input as i32)
 }
 
 #[embassy_executor::task]

@@ -38,12 +38,10 @@ pub(crate) struct MotorDrive {
     gravity_magnitude: RadianFixed16,
     collective_power: DegreeFixed32,
     collective_target: DegreeFixed32,
-    // Desired tilt and gyre vector, for lateral movement and rotation.
-    // Please pre-normalize!
     target_tilt: [DegreeFixed32; 3],
+    target_tilt_target: [DegreeFixed32; 3],
     // For orientation-based derivative factor
     previous_orientation: [DegreeFixed32; 3],
-    target_tilt_derivative_buf: DelayBuf<[DegreeFixed32; 3], 4>,
     previous_acc_error: [UnityFixed16; 3],
     integrated_acc_error: [UnityFixed16; 3],
 }
@@ -58,7 +56,7 @@ impl MotorDrive {
             collective_power: DegreeFixed32::from_bits(0),
             collective_target: DegreeFixed32::from_bits(0),
             target_tilt: Default::default(),
-            target_tilt_derivative_buf: DelayBuf::new_with_default(Default::default()),
+            target_tilt_target: Default::default(),
             previous_orientation: Default::default(),
             previous_acc_error: Default::default(),
             integrated_acc_error: Default::default(),
@@ -82,6 +80,9 @@ impl MotorDrive {
                     .unwrap();
             }
         }
+        for i in 0..3 {
+            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(0.003: I12F20));
+        }
     }
 
     pub(crate) fn cut_motors(&mut self) {
@@ -100,6 +101,10 @@ impl MotorDrive {
         let pct_clamped = core::cmp::min(pct, 100);
         self.collective_target = DegreeFixed32::from_num(pct_clamped) / 100;
         debug_println!("Setting collective: {}", self.collective_target);
+    }
+
+    pub(crate) fn set_target_tilt(&mut self, target_tilt: [DegreeFixed32; 3]) {
+        self.target_tilt_target = target_tilt;
     }
 
     // PID constants.
