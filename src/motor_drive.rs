@@ -37,12 +37,11 @@ pub(crate) struct MotorDrive {
     attitude_int: [DegreeFixed32; 3],
     gravity_magnitude: RadianFixed16,
     collective_power: DegreeFixed32,
-    // Desired tilt and gyre vector, for lateral movement and rotation.
-    // Please pre-normalize!
+    collective_target: DegreeFixed32,
     target_tilt: [DegreeFixed32; 3],
+    target_tilt_target: [DegreeFixed32; 3],
     // For orientation-based derivative factor
     previous_orientation: [DegreeFixed32; 3],
-    target_tilt_derivative_buf: DelayBuf<[DegreeFixed32; 3], 4>,
     previous_acc_error: [UnityFixed16; 3],
     integrated_acc_error: [UnityFixed16; 3],
 }
@@ -55,8 +54,9 @@ impl MotorDrive {
             current_drive: [[0; 2]; 2],
             attitude_int: [DegreeFixed32::from_bits(0); 3],
             collective_power: DegreeFixed32::from_bits(0),
+            collective_target: DegreeFixed32::from_bits(0),
             target_tilt: Default::default(),
-            target_tilt_derivative_buf: DelayBuf::new_with_default(Default::default()),
+            target_tilt_target: Default::default(),
             previous_orientation: Default::default(),
             previous_acc_error: Default::default(),
             integrated_acc_error: Default::default(),
@@ -66,8 +66,12 @@ impl MotorDrive {
 
     const SLEW_CONSTANT_UP: u8 = 10;
     const SLEW_CONSTANT_DOWN: u8 = 10;
+    const COLLECTIVE_SLEW_UP: DegreeFixed32 = fixed!(0.01: I12F20);
+    const COLLECTIVE_SLEW_DOWN: DegreeFixed32 = fixed!(0.2: I12F20);
     // Call this with timed ticks to apply motor slew
     pub(crate) fn motor_tick(&mut self) {
+        self.collective_power = utils::asymmetrical_rate_limit(self.collective_power, self.collective_target, Self::COLLECTIVE_SLEW_UP, Self::COLLECTIVE_SLEW_DOWN);
+        debug_println!("Actual collective: {}", self.collective_power * 100);
         for r in 0..2 {
             for c in 0..2 {
                 self.current_drive[r][c] = utils::asymmetrical_rate_limit(self.current_drive[r][c], self.motor_targets[r][c], Self::SLEW_CONSTANT_UP, Self::SLEW_CONSTANT_DOWN);
@@ -76,6 +80,10 @@ impl MotorDrive {
                     .unwrap();
             }
         }
+/*        for i in 0..3 {
+            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(0.003: I12F20));
+        }*/
+        self.target_tilt = self.target_tilt_target;
     }
 
     pub(crate) fn cut_motors(&mut self) {
@@ -92,8 +100,12 @@ impl MotorDrive {
         const MAX_OUTPUT: u32 = i16::MAX as u32;
         const RATIO: u32 = MAX_OUTPUT / MAX_INPUT;
         let pct_clamped = core::cmp::min(pct, 100);
-        self.collective_power = DegreeFixed32::from_num(pct_clamped) / 100;
-        debug_println!("Setting collective: {}", self.collective_power);
+        self.collective_target = DegreeFixed32::from_num(pct_clamped) / 100;
+        debug_println!("Setting collective: {}", self.collective_target);
+    }
+
+    pub(crate) fn set_target_tilt(&mut self, target_tilt: [DegreeFixed32; 3]) {
+        self.target_tilt_target = target_tilt;
     }
 
     // PID constants.
@@ -121,15 +133,20 @@ impl MotorDrive {
 
 
         // Handle acceleration adjustments
+        let target_tilt_mapped = self.target_tilt.map(|x| x / 180);
         let tilt_v = data.map(|x| x / 180);
         debug_println!("xz_tilt, yz_tilt: [{}, {}]", tilt_v[0], tilt_v[1]);
         // Uhhh do we wanna do trig wrap here
-        let err_v: [_; 3] = core::array::from_fn(|i| self.target_tilt[i] - tilt_v[i]);
+        let err_v: [_; 3] = core::array::from_fn(|i| target_tilt_mapped[i] - tilt_v[i]);
+        debug_println!("Orientation error: {:?}", err_v);
         let mut motor_adjustments = [[DegreeFixed32::from_num(0); 2]; 2];
         // Motors get power added if craft is tilting towards either of the 4 rectangular edges
         // that the motor sits at the corner to.
                 // Attitude integral error handling
-        self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
+        // Avoid changing integral while not trying to hover
+        if target_tilt_mapped[0] == DegreeFixed32::ZERO && target_tilt_mapped[1] == DegreeFixed32::ZERO {
+            self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
+        }
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
         let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
@@ -142,7 +159,7 @@ impl MotorDrive {
         motor_adjustments[0][1] = motor_adjustments[0][1].saturating_sub(adj_fn[0]).saturating_sub(adj_fn[1]);
         motor_adjustments[1][0] = motor_adjustments[1][0].saturating_add(adj_fn[0]).saturating_add(adj_fn[1]);
         motor_adjustments[1][1] = motor_adjustments[1][1].saturating_sub(adj_fn[0]).saturating_add(adj_fn[1]);
-
+        debug_println!("Motor_adjustments (no gyro): {:?}", motor_adjustments);
         // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
         // corrections should handle xy rotation
         let rotation_error = err_v[2];
