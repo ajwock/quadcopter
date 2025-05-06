@@ -9,11 +9,19 @@ use az::Cast;
 use crate::debug_println;
 use esp_println::println;
 
+// This data structure represents integrated and fused IMU data to estimate
+// orientation, speed, and position.
 pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
+    pub speed: [DegreeFixed32; 3],
+    pub position: [DegreeFixed32; 3],
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
     pub imuctl: ImuController<M>,
+}
+
+pub fn reading_to_accel_ms2(reading: i16) -> DegreeFixed32 {
+    todo!()
 }
 
 //const DEGREE_SCALING_FACTOR: i32 = 64000;
@@ -51,6 +59,8 @@ impl<M: Imu> OrientationTracker<M> {
     pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
+            speed: [DegreeFixed32::from_bits(0); 3],
+            position: [DegreeFixed32::from_bits(0); 3],
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
             imuctl,
