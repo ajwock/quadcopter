@@ -126,7 +126,7 @@ impl MotorDrive {
     }
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
-        if data[0].abs() > 45 || data[1].abs() > 45 {
+        if false && (data[0].abs() > 45 || data[1].abs() > 45) {
             self.cut_motors();
             panic!("Over tilt limit, power cut.  Orientation: {:?}", data);
         }

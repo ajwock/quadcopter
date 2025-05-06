@@ -204,7 +204,7 @@ async fn main(spawner: Spawner) {
     }
 
 
-    CONTROLLER_CONNECTED.wait().await;
+    // CONTROLLER_CONNECTED.wait().await;
     /* IMU SETUP */
     let mut conn_led = Output::new(
         peripherals.GPIO8,
@@ -347,7 +347,7 @@ async fn main(spawner: Spawner) {
         }
         orientation_tracker.track().await;
         let orientation = orientation_tracker.get_orientation();
-        debug_println!("Orientation: {:?}", orientation);
+        println!("Orientation: {:?}", orientation);
         let control_vals = CONTROLS.get_vals();
         motor_drive.set_collective_pct(control_vals.collective);
         let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];

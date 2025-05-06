@@ -8,6 +8,8 @@ use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, Ra
 use az::Cast;
 use crate::debug_println;
 use esp_println::println;
+use fixed_macro::fixed;
+use fixed::types::I12F20;
 
 // This data structure represents integrated and fused IMU data to estimate
 // orientation, speed, and position.
@@ -24,21 +26,24 @@ pub fn reading_to_accel_ms2(reading: i16) -> DegreeFixed32 {
     todo!()
 }
 
-//const DEGREE_SCALING_FACTOR: i32 = 64000;
-const DEGREE_SCALING_FACTOR: i32 = 640;
-const HALVED_DEGREE_SCALING_FACTOR: i32 = DEGREE_SCALING_FACTOR / 2;
-pub fn reading_to_dps_32(reading: i16) -> DegreeFixed32 {
-    DegreeFixed32::from_bits(reading as i32) * DEGREE_SCALING_FACTOR
+// 2000/32767 (dps per lsb) 
+const DPS_SCALING_FACTOR: I12F20 = fixed!(0.0000061037019: I12F20);
+pub fn reading_to_dps_32_thousandth(reading: i16) -> I12F20 {
+    (reading as i32) * DPS_SCALING_FACTOR
 }
 
+const HALVED_DPS_SCALING_FACTOR: I12F20 = fixed!(0.0000030518509: I12F20);
 // Why this?  Saves us a separate muliply or division later on
-pub fn halved_reading_to_dps_32(reading: i16) -> DegreeFixed32 {
-    DegreeFixed32::from_bits(reading as i32) * HALVED_DEGREE_SCALING_FACTOR
+pub fn halved_reading_to_dps_32(reading: i16) -> I12F20 {
+    (reading as i32) * HALVED_DPS_SCALING_FACTOR 
 }
 
-const TIME_SCALE_FACTOR: i32 = 1_099_512;
-pub fn timestamp_diff_to_seconds(timestamp: u16) -> DegreeFixed32 {
-    DegreeFixed32::from_bits(timestamp as i32) * DegreeFixed32::from_bits(TIME_SCALE_FACTOR)
+// .000001 * 100
+const TIME_SCALE_FACTOR: I12F20 = fixed!(0.0001: I12F20);
+pub fn timestamp_diff_to_seconds(timestamp: u16) -> I12F20 {
+    // Casting plus conversion from micros to seconds
+    // I'm not entirely sure but I think this only works for U20 specifically
+    (timestamp as i32) * TIME_SCALE_FACTOR
 }
 
 const DEGREES_180: DegreeFixed32 = DegreeFixed32::from_bits(188743680);
