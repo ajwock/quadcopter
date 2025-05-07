@@ -347,7 +347,11 @@ async fn main(spawner: Spawner) {
         }
         orientation_tracker.track().await;
         let orientation = orientation_tracker.get_orientation();
+        let velocity = orientation_tracker.get_velocity();
+        let position = orientation_tracker.get_position();
         println!("Orientation: {:?}", orientation);
+        println!("Velocity: {:?}", velocity);
+        println!("Position: {:?}", position);
         let control_vals = CONTROLS.get_vals();
         motor_drive.set_collective_pct(control_vals.collective);
         let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];

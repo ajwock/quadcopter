@@ -9,24 +9,61 @@ use az::Cast;
 use crate::debug_println;
 use esp_println::println;
 use fixed_macro::fixed;
+use fixed_trigonometry::*;
 use fixed::types::I12F20;
 
 // This data structure represents integrated and fused IMU data to estimate
 // orientation, speed, and position.
 pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
-    pub speed: [DegreeFixed32; 3],
+    pub velocity: [DegreeFixed32; 3],
     pub position: [DegreeFixed32; 3],
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
     pub imuctl: ImuController<M>,
 }
 
-pub fn reading_to_accel_ms2(reading: i16) -> DegreeFixed32 {
-    todo!()
+pub fn to_radians(degrees: I12F20) -> I12F20 {
+    degrees * fixed!(0.0174532925: I12F20) // PI / 180
 }
 
-// 2000/32767 (dps per lsb) 
+// Applies inverse rotation from orientation to accel vector
+pub fn rotate_to_global_frame(
+    accel: [I12F20; 3],
+    orientation: [I12F20; 3],
+) -> [I12F20; 3] {
+    let [roll, pitch, yaw] = orientation.map(|i| to_radians(i));
+    let sin_r = sin(-roll);
+    let cos_r = cos(-roll);
+    let sin_p = sin(-pitch);
+    let cos_p = cos(-pitch);
+    let sin_y = sin(-yaw);
+    let cos_y = cos(-yaw);
+
+    let [ax, ay, az] = accel;
+
+    // Rotate X (roll)
+    let ay1 = cos_r * ay - sin_r * az;
+    let az1 = sin_r * ay + cos_r * az;
+
+    // Rotate Y (pitch)
+    let ax2 = cos_p * ax + sin_p * az1;
+    let az2 = -sin_p * ax + cos_p * az1;
+
+    // Rotate Z (yaw)
+    let ax3 = cos_y * ax2 - sin_y * ay1;
+    let ay3 = sin_y * ax2 + cos_y * ay1;
+
+    [ax3, ay3, az2]
+}
+
+const ACCEL_SCALING_FACTOR: I12F20 = fixed!(0.000011962891: I12F20);
+pub fn reading_to_accel_ms2(reading: i16) -> DegreeFixed32 {
+    (reading as i32) * ACCEL_SCALING_FACTOR
+}
+
+// 2000/32767 (dps per lsb) * 1/100 * 1/100
+// I still don't understand where the 100x error is coming from
 const DPS_SCALING_FACTOR: I12F20 = fixed!(0.0000061037019: I12F20);
 pub fn reading_to_dps_32_thousandth(reading: i16) -> I12F20 {
     (reading as i32) * DPS_SCALING_FACTOR
@@ -64,7 +101,7 @@ impl<M: Imu> OrientationTracker<M> {
     pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
-            speed: [DegreeFixed32::from_bits(0); 3],
+            velocity: [DegreeFixed32::from_bits(0); 3],
             position: [DegreeFixed32::from_bits(0); 3],
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
@@ -74,6 +111,14 @@ impl<M: Imu> OrientationTracker<M> {
 
     pub fn get_orientation(&self) -> [DegreeFixed32; 3] {
         self.orientation
+    }
+   
+    pub fn get_velocity(&self) -> [DegreeFixed32; 3] {
+        self.velocity
+    }
+
+    pub fn get_position(&self) -> [DegreeFixed32; 3] {
+        self.position
     }
 
     pub async fn track(&mut self) {
@@ -95,13 +140,27 @@ impl<M: Imu> OrientationTracker<M> {
                 }
             };
             let timestamp = msg.timestamp;
-            let _accel_data = msg.accel_data;
+            let accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
             let timestamp_diff = if timestamp < self.last_gyro_timestamp {
                 u16::MAX - self.last_gyro_timestamp + timestamp
             } else {
                 self.last_gyro_timestamp - timestamp
             };
+            let time_step = timestamp_diff_to_seconds(timestamp_diff);
+            let accel_conv = accel_data.map(|i| reading_to_accel_ms2(i));
+            let accel_objective = rotate_to_global_frame(accel_conv, self.orientation);
+
+            // Doing riemann sum for accel, less need for precision
+            for i in 0..3 {
+                let delta_v = accel_objective[i] * time_step * fixed!(0.001: I12F20);
+                self.velocity[i] += delta_v;
+            }
+/*
+            for i in 0..3 {
+                let delta_p = self.velocity[i] * time_step * fixed!(0.001: I12F20);
+                self.position[i] += delta_p;
+            }*/
 
             //  gyro data is in degrees per second, 16.4 LSB per degree/s
             //  timestamp in LSB per microsecond
@@ -111,7 +170,6 @@ impl<M: Imu> OrientationTracker<M> {
             // o_d(t) = o_d(t - h) + h/2 * [o_d'(i - h) + o_d'(i)]
             // Below we pre-half our readings by lumping in a multiply by half with the
             // degree per lsb multiply.
-            let time_step = timestamp_diff_to_seconds(timestamp_diff);
             debug_println!("time_step: {time_step}");
             for i in 0..3 {
                 let new_halved_reading = halved_reading_to_dps_32(gyro_data[i]);
