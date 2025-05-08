@@ -20,10 +20,6 @@ pub struct OrientationTracker<M: Imu> {
     pub imuctl: ImuController<M>,
 }
 
-pub fn reading_to_accel_ms2(reading: i16) -> DegreeFixed32 {
-    todo!()
-}
-
 //const DEGREE_SCALING_FACTOR: i32 = 64000;
 const DEGREE_SCALING_FACTOR: i32 = 640;
 const HALVED_DEGREE_SCALING_FACTOR: i32 = DEGREE_SCALING_FACTOR / 2;
