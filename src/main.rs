@@ -360,7 +360,7 @@ async fn main(spawner: Spawner) {
     }
 }
 
-const TILT_SCALE: DegreeFixed32 = fixed!(0.1: I12F20);
+const TILT_SCALE: DegreeFixed32 = fixed!(0.2: I12F20);
 fn xy_tilt_input_xlat(input: i8) -> DegreeFixed32 {
     TILT_SCALE * (input as i32)
 }
