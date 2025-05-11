@@ -351,8 +351,9 @@ async fn main(spawner: Spawner) {
         }
         orientation_tracker.track().await;
         let orientation = orientation_tracker.get_orientation();
-        debug_println!("Orientation: {:?}", orientation);
-        debug_println!("Acc tilts: {:?}", orientation_tracker.accel_tilt);
+        println!("Orientation: {:?}", orientation);
+        println!("Fused Orientation: {:?}", orientation_tracker.fused_orientation);
+        println!("Acc tilts: {:?}", orientation_tracker.accel_tilt);
         CURRENT_X.store(orientation[0].to_bits(), Ordering::Relaxed);
         CURRENT_Y.store(orientation[1].to_bits(), Ordering::Relaxed);
         CURRENT_Z.store(orientation[2].to_bits(), Ordering::Relaxed);

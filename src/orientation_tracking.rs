@@ -16,6 +16,7 @@ use fixed::types::I12F20;
 // orientation, speed, and position.
 pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
+    pub fused_orientation: [DegreeFixed32; 3],
     pub accel_tilt: [DegreeFixed32; 2],
     pub speed: [DegreeFixed32; 3],
     pub position: [DegreeFixed32; 3],
@@ -68,6 +69,7 @@ impl<M: Imu> OrientationTracker<M> {
     pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
+            fused_orientation: [DegreeFixed32::from_bits(0); 3],
             accel_tilt: Default::default(),
             speed: [DegreeFixed32::from_bits(0); 3],
             position: [DegreeFixed32::from_bits(0); 3],
@@ -82,10 +84,11 @@ impl<M: Imu> OrientationTracker<M> {
     }
 
     pub fn att_accel(z_accel: DegreeFixed32, proj_accel: DegreeFixed32) -> DegreeFixed32 {
-        (I12F20::FRAC_PI_2 - atan2(z_accel, proj_accel)) * FRAC_180_PI
+//        atan2(z_accel, proj_accel)) * FRAC_180_PI
+        todo!()
     }
 
-    const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(0.99: I12F20);
+    const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(0.999: I12F20);
     pub fn complementary_filter(gyro_degrees: I12F20, accel_degrees: I12F20) -> I12F20 {
         Self::COMPLEMENTARY_ALPHA * gyro_degrees + (I12F20::ONE - Self::COMPLEMENTARY_ALPHA) * accel_degrees
     }
@@ -113,8 +116,11 @@ impl<M: Imu> OrientationTracker<M> {
             let [acc_x, acc_y, acc_z] = accel_data.map(|elt| reading_to_accel_ms2(elt));
             // Oh... I'm now aware of so much wrong I've been doing to myself...
             // Maybe I need to explicitly use the terms pitch and roll.  TODO
-            let att_acc_y = Self::att_accel(acc_z, acc_x);
-            let att_acc_x = Self::att_accel(acc_z, acc_y);
+            //
+            let att_acc_y = atan2(-acc_x, (acc_y*acc_y + acc_z*acc_z).sqrt()) * FRAC_180_PI;
+            //let att_acc_y = -Self::att_accel(acc_z, acc_x);
+            let att_acc_x = atan2(acc_y, (acc_x*acc_x + acc_z*acc_z).sqrt()) * FRAC_180_PI;
+//            let att_acc_x = Self::att_accel(acc_z, acc_y);
             self.accel_tilt = [att_acc_x, att_acc_y];
 /*            if gyro_data[0] as u16 == 0xffff || gyro_data[1] as u16 == 0xffff || gyro_data[2] as u16 == 0xffff {
                 panic!("Got erronious gyro data value");
@@ -142,11 +148,12 @@ impl<M: Imu> OrientationTracker<M> {
                 let delta_orientation = avg_derivative * time_step;
                 debug_println!("avg_derivative[{i}]: {avg_derivative}, delta orientation[{i}]: {delta_orientation}, last_gyro_data_halved[{i}]: {}", self.last_gyro_data_halved[i]);
                 self.orientation[i] = self.orientation[i] + delta_orientation;
+                self.fused_orientation[i] = self.fused_orientation[i] + delta_orientation;
                 self.last_gyro_data_halved[i] = new_halved_reading;
             }
             self.last_gyro_timestamp = timestamp;
         }
-        self.orientation[0] = Self::complementary_filter(self.orientation[0], self.accel_tilt[0]);
-        self.orientation[1] = Self::complementary_filter(self.orientation[1], self.accel_tilt[1]);
+        self.fused_orientation[0] = Self::complementary_filter(self.fused_orientation[0], self.accel_tilt[0]);
+        self.fused_orientation[1] = Self::complementary_filter(self.fused_orientation[1], self.accel_tilt[1]);
     }
 }
