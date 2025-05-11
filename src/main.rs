@@ -79,7 +79,7 @@ use esp_wifi::{
     EspWifiController,
 };
 use motor_drive::MotorDrive;
-use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU8};
+use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU8, AtomicI32};
 
 use imu_common::{Imu, ImuCalibrator};
 
@@ -124,6 +124,10 @@ static CONTROLS: Controls = Controls {
     rot_z: AtomicI8::new(0),
     collective: AtomicU8::new(0),
 };
+
+static CURRENT_X: AtomicI32 = AtomicI32::new(0);
+static CURRENT_Y: AtomicI32 = AtomicI32::new(0);
+static CURRENT_Z: AtomicI32 = AtomicI32::new(0);
 
 static CONTROLLER_CONNECTED: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 static CONTROLLER_DISCONNECTED: AtomicBool = AtomicBool::new(false);
@@ -347,7 +351,10 @@ async fn main(spawner: Spawner) {
         }
         orientation_tracker.track().await;
         let orientation = orientation_tracker.get_orientation();
-        debug_println!("Orientation: {:?}", orientation);
+        println!("Orientation: {:?}", orientation);
+        CURRENT_X.store(orientation[0].to_bits(), Ordering::Relaxed);
+        CURRENT_Y.store(orientation[1].to_bits(), Ordering::Relaxed);
+        CURRENT_Z.store(orientation[2].to_bits(), Ordering::Relaxed);
         let control_vals = CONTROLS.get_vals();
         motor_drive.set_collective_pct(control_vals.collective);
         let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];
@@ -407,6 +414,14 @@ async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static 
                     };
                     CONTROLS.update(vals);
                     debug_println!("Updated controls: {:?}", vals);
+                    let x = CURRENT_X.load(Ordering::Relaxed);
+                    let y = CURRENT_Y.load(Ordering::Relaxed);
+                    let z = CURRENT_Z.load(Ordering::Relaxed);
+                    let mut buf = [0u8; 12];
+                    buf[0..4].copy_from_slice(&x.to_be_bytes());
+                    buf[4..8].copy_from_slice(&y.to_be_bytes());
+                    buf[8..12].copy_from_slice(&z.to_be_bytes());
+                    let _ = sock.write(&mut buf).await;
                 }
                 Err(e) => {
                     debug_println!("Read error in control loop: {:?}", e);

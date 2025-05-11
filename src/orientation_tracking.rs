@@ -76,11 +76,10 @@ impl<M: Imu> OrientationTracker<M> {
                     break
                 }
                 Err(e) => {
-                    println!("Orientation tracking got error: {:?}", e);
+                    debug_println!("Orientation tracking got error: {:?}", e);
                     err_count += 1;
                     if err_count > 20 {
-                        println!("Orientation tracking got too many errors...");
-                        break
+                        panic!("Orientation tracking got too many errors...");
                     }
                     continue
                 }
@@ -88,6 +87,9 @@ impl<M: Imu> OrientationTracker<M> {
             let timestamp = msg.timestamp;
             let _accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
+/*            if gyro_data[0] as u16 == 0xffff || gyro_data[1] as u16 == 0xffff || gyro_data[2] as u16 == 0xffff {
+                panic!("Got erronious gyro data value");
+            }*/
             let timestamp_diff = if timestamp < self.last_gyro_timestamp {
                 u16::MAX - self.last_gyro_timestamp + timestamp
             } else {

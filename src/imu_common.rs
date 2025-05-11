@@ -107,7 +107,7 @@ pub trait Imu {
 }
 
 // The IMU calibrator must be run some opaque number of ticks until
-// it yields a calibratoed Imu Controller.
+// it yields a calibrated Imu Controller.
 pub struct ImuCalibrator<M: Imu, const N: usize> {
     imu_holder: Option<M>,
     calibration_data: SmallVec<[MotionData; N]>,

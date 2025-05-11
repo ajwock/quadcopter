@@ -80,10 +80,11 @@ impl MotorDrive {
                     .unwrap();
             }
         }
-/*        for i in 0..3 {
-            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(0.003: I12F20));
-        }*/
-        self.target_tilt = self.target_tilt_target;
+        for i in 0..3 {
+            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(1.2: I12F20));
+        }
+        println!("target_tilt: {:?}", self.target_tilt);
+        //self.target_tilt = self.target_tilt_target;
     }
 
     pub(crate) fn cut_motors(&mut self) {
@@ -144,9 +145,9 @@ impl MotorDrive {
         // that the motor sits at the corner to.
                 // Attitude integral error handling
         // Avoid changing integral while not trying to hover
-        if target_tilt_mapped[0] == DegreeFixed32::ZERO && target_tilt_mapped[1] == DegreeFixed32::ZERO {
-            self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
-        }
+//        if target_tilt_mapped[0] == DegreeFixed32::ZERO && target_tilt_mapped[1] == DegreeFixed32::ZERO {
+          self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
+ //       }
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
         let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
