@@ -83,7 +83,7 @@ impl MotorDrive {
         for i in 0..3 {
             self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(1.2: I12F20));
         }
-        println!("target_tilt: {:?}", self.target_tilt);
+        debug_println!("target_tilt: {:?}", self.target_tilt);
         //self.target_tilt = self.target_tilt_target;
     }
 
@@ -127,7 +127,7 @@ impl MotorDrive {
     }
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
-        if data[0].abs() > 45 || data[1].abs() > 45 {
+        if data[0].abs() > 55 || data[1].abs() > 55 {
             self.cut_motors();
             panic!("Over tilt limit, power cut.  Orientation: {:?}", data);
         }
