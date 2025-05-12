@@ -113,7 +113,7 @@ impl<M: Imu> OrientationTracker<M> {
             let accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
 
-            let [acc_x, acc_y, acc_z] = accel_data.map(|elt| reading_to_accel_ms2(elt));
+            let [acc_x, acc_y, acc_z] = accel_data.map(|elt| reading_to_accel_ms2(elt) * fixed!(0.1: I12F20));
             // Oh... I'm now aware of so much wrong I've been doing to myself...
             // Maybe I need to explicitly use the terms pitch and roll.  TODO
             //
@@ -155,5 +155,6 @@ impl<M: Imu> OrientationTracker<M> {
         }
         self.fused_orientation[0] = Self::complementary_filter(self.fused_orientation[0], self.accel_tilt[0]);
         self.fused_orientation[1] = Self::complementary_filter(self.fused_orientation[1], self.accel_tilt[1]);
+        self.orientation = self.fused_orientation;
     }
 }
