@@ -11,6 +11,7 @@ use esp_println::println;
 use fixed_macro::fixed;
 use fixed_trigonometry::atan::atan2;
 use fixed::types::I12F20;
+use crate::delay_buf::DelayBuf;
 
 // This data structure represents integrated and fused IMU data to estimate
 // orientation, speed, and position.
@@ -18,6 +19,8 @@ pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
     pub fused_orientation: [DegreeFixed32; 3],
     pub accel_tilt: [DegreeFixed32; 2],
+    pub accel_avg: [DegreeFixed32; 3],
+    pub accel_filter_delay: DelayBuf<[DegreeFixed32; 3], 1600>,
     pub speed: [DegreeFixed32; 3],
     pub position: [DegreeFixed32; 3],
     pub last_gyro_timestamp: u16,
@@ -71,6 +74,8 @@ impl<M: Imu> OrientationTracker<M> {
             orientation: [DegreeFixed32::from_bits(0); 3],
             fused_orientation: [DegreeFixed32::from_bits(0); 3],
             accel_tilt: Default::default(),
+            accel_avg: [I12F20::ZERO, I12F20::ZERO, fixed!(9.8: I12F20)],
+            accel_filter_delay: DelayBuf::new_with_default([I12F20::ZERO, I12F20::ZERO, fixed!(9.8: I12F20)]),
             speed: [DegreeFixed32::from_bits(0); 3],
             position: [DegreeFixed32::from_bits(0); 3],
             last_gyro_timestamp: 0,
@@ -83,12 +88,7 @@ impl<M: Imu> OrientationTracker<M> {
         self.orientation
     }
 
-    pub fn att_accel(z_accel: DegreeFixed32, proj_accel: DegreeFixed32) -> DegreeFixed32 {
-//        atan2(z_accel, proj_accel)) * FRAC_180_PI
-        todo!()
-    }
-
-    const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(0.999: I12F20);
+    const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(1: I12F20);
     pub fn complementary_filter(gyro_degrees: I12F20, accel_degrees: I12F20) -> I12F20 {
         Self::COMPLEMENTARY_ALPHA * gyro_degrees + (I12F20::ONE - Self::COMPLEMENTARY_ALPHA) * accel_degrees
     }
@@ -112,8 +112,11 @@ impl<M: Imu> OrientationTracker<M> {
             let timestamp = msg.timestamp;
             let accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
-
-            let [acc_x, acc_y, acc_z] = accel_data.map(|elt| reading_to_accel_ms2(elt));
+            let accel_fixed = accel_data.map(|elt| reading_to_accel_ms2(elt));
+            let filt_out = self.accel_filter_delay.delay(accel_fixed);
+            self.accel_avg.iter_mut().zip(filt_out.into_iter()).for_each(|(accvg_lval, f)| *accvg_lval -= f / fixed!(1600: I12F20));
+            self.accel_avg.iter_mut().zip(accel_fixed.into_iter()).for_each(|(accvg_lval, a)| *accvg_lval += a / fixed!(1600: I12F20));
+            let [acc_x, acc_y, acc_z] = self.accel_avg.map(|elt| elt * fixed!(0.1: I12F20));
             // Oh... I'm now aware of so much wrong I've been doing to myself...
             // Maybe I need to explicitly use the terms pitch and roll.  TODO
             //
@@ -155,5 +158,6 @@ impl<M: Imu> OrientationTracker<M> {
         }
         self.fused_orientation[0] = Self::complementary_filter(self.fused_orientation[0], self.accel_tilt[0]);
         self.fused_orientation[1] = Self::complementary_filter(self.fused_orientation[1], self.accel_tilt[1]);
+        self.orientation = self.fused_orientation;
     }
 }
