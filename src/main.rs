@@ -209,7 +209,7 @@ async fn main(spawner: Spawner) {
     }
 
 
-    CONTROLLER_CONNECTED.wait().await;
+    //CONTROLLER_CONNECTED.wait().await;
     /* IMU SETUP */
     let mut conn_led = Output::new(
         peripherals.GPIO8,
@@ -220,7 +220,7 @@ async fn main(spawner: Spawner) {
     let i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
-            .with_frequency(Rate::from_khz(1000)),
+            .with_frequency(Rate::from_khz(400)),
     )
     .unwrap()
     .with_sda(peripherals.GPIO10)

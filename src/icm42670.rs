@@ -16,7 +16,7 @@ use crate::imu_common::{
 use esp_hal::i2c;
 
 // 7 bit address of the accelerometer
-pub const ACCEL_ADDRESS: u8 = 0b1101000;
+pub const ACCEL_ADDRESS: u8 = 0b1101010;
 
 pub struct Icm42670<'a> {
     comm: I2c<'a, Async>,
@@ -423,7 +423,7 @@ impl<'a> Icm42670<'a> {
         let mut d = embassy_time::Delay;
         d.delay_us(200).await;
         println!("ICM42680 powered on, verifying identity");
-        let id = self.read_reg(0x75).await?;
+        let id = self.read_reg(0x0f).await?;
         println!("Got id: 0x{:x}", id);
         if id != 0x67 {
             panic!("Device not identified as icm42760, expected 0x67 but got 0x{:x}", id);
