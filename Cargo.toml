@@ -78,6 +78,7 @@ embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
 embassy-futures = "0.1.1"
 fixed-macro = "1.2.0"
+cordic = "0.1.5"
 
 [profile.dev]
 # Rust debug is too slow.

@@ -10,6 +10,7 @@ mod orientation_tracking;
 mod utils;
 mod receiver;
 mod delay_buf;
+mod quaternion_orientation;
 
 use motion_data::DegreeFixed32;
 use fixed_macro::fixed;
@@ -233,7 +234,7 @@ async fn main(spawner: Spawner) {
         OutputConfig::default(),
     );
     ad0.set_low();
-    // Pull the icm42670 'cs' pin low (it's unused for i2c)
+    // Pull the icm42670 'cs' pin high, it must be for i2c to work
     let mut cs = Output::new(
         peripherals.GPIO5,
         Level::High,
