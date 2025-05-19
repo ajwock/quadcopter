@@ -9,7 +9,11 @@ target/
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+# Generally backups for kicad or freecad
 *.zip
+
+# gcode files should be ignored
+*.nc
 
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

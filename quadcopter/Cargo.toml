@@ -7,12 +7,6 @@ version = "0.1.0"
 name = "quadcopter"
 path = "./src/main.rs"
 
-[patch.crates-io]
-esp-hal = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-hal" }
-esp-wifi = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-wifi" }
-esp-hal-embassy = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-hal-embassy" }
-esp-alloc = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-alloc" }
-
 [dependencies]
 embassy-net = { version = "0.6.0", features = [
   "dhcpv4",
@@ -22,15 +16,16 @@ embassy-net = { version = "0.6.0", features = [
 ] }
 embedded-io = "0.6.1"
 embedded-io-async = "0.6.1"
-esp-alloc = "0.7.0"
 esp-backtrace = { version = "0.15.1", features = [
   "esp32c3",
   "exception-handler",
   "panic-handler",
   "println",
 ] }
-esp-hal = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-hal", features=["unstable", "esp32c3"] }
-esp-wifi = { path = "/home/dzdt/embedded_rust/esp32/esp-hal/esp-wifi", features=["esp32c3", "wifi"] }
+esp-hal = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal", features=["unstable", "esp32c3"] }
+esp-hal-embassy = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal-embassy", features=["esp32c3"] }
+esp-alloc = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-alloc" }
+esp-wifi = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-wifi", features=["wifi", "esp32c3"] }
 esp-println = { version = "0.13.0", features = ["esp32c3"] }
 smoltcp = { version = "0.12.0", default-features = false, features = [
   "medium-ethernet",
@@ -52,7 +47,6 @@ bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5
 critical-section = "1.2.0"
 embassy-executor = { version = "0.7.0", features = ["task-arena-size-65536"] }
 embassy-time = { version = "0.4.0", features = ["generic-queue-8"] }
-esp-hal-embassy = { version = "0.7.0", features = ["esp32c3"] }
 heapless = { version = "0.8.0", default-features = false }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 embassy-sync = "0.6.2"
