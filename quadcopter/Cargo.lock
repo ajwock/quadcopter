@@ -1022,6 +1022,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
+name = "icm42670p_pac"
+version = "0.1.0"
+dependencies = [
+ "regcomms",
+ "regcommsgen",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1400,6 +1408,8 @@ dependencies = [
  "fixed-macro",
  "fixed_trigonometry",
  "heapless",
+ "icm42670p_pac",
+ "regcomms",
  "smallvec",
  "smoltcp",
  "static_cell",
@@ -1432,6 +1442,24 @@ name = "rand_core"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
+
+[[package]]
+name = "regcomms"
+version = "0.1.0"
+source = "git+https://github.com/ajwock/regcomms.git#2508c712a8ba885938f63fc6ee34e8a9540e7df0"
+dependencies = [
+ "embedded-hal-async",
+]
+
+[[package]]
+name = "regcommsgen"
+version = "0.1.0"
+source = "git+https://github.com/ajwock/regcomms.git#2508c712a8ba885938f63fc6ee34e8a9540e7df0"
+dependencies = [
+ "serde",
+ "serde_yaml",
+ "stringcase",
+]
 
 [[package]]
 name = "riscv"
@@ -1528,6 +1556,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_yaml"
+version = "0.9.34+deprecated"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
+]
+
+[[package]]
 name = "sha1_smol"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1566,6 +1607,12 @@ checksum = "d89b0684884a883431282db1e4343f34afc2ff6996fe1f4a1664519b66e14c1e"
 dependencies = [
  "portable-atomic",
 ]
+
+[[package]]
+name = "stringcase"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72abeda133c49d7bddece6c154728f83eec8172380c80ab7096da9487e20d27c"
 
 [[package]]
 name = "strsim"
@@ -1695,6 +1742,12 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "uuid"

@@ -1,0 +1,588 @@
+name: Icm42670P
+byte_order: Big
+address_len: 1
+registers:
+  - name: rdy
+    address: 0x0
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: mclk_rdy
+        field_pos: '3'
+  - name: device_config
+    address: 0x1
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x04
+    fields:
+      - name: spi_ap_4wire
+        field_pos: '2'
+      - name: spi_mode
+        field_pos: '0'
+  - name: signal_path_reset
+    address: 0x2
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: soft_reset_device_config
+        field_pos: '4'
+      - name: fifo_flush
+        field_pos: '2'
+  - name: drive_config1
+    address: 0x3
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x2b
+    fields:
+      - name: i3c_ddr_slew_rate
+        field_pos: '[5:3]'
+      - name: i3c_sdr_slew_rate
+        field_pos: '[2:0]'
+  - name: drive_config2
+    address: 0x4
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x0d
+    fields:
+      - name: i2c_slew_rate
+        field_pos: '[5:3]'
+      - name: all_slew_rate
+        field_pos: '[2:0]'
+  - name: drive_config3
+    address: 0x5
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x05
+    fields:
+      - name: spi_slew_rate
+        field_pos: '[2:0]'
+  - name: int_config
+    address: 0x6
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_mode
+        field_pos: '5'
+      - name: int2_drive_circuit
+        field_pos: '4'
+      - name: int2_polarity
+        field_pos: '3'
+      - name: int1_mode
+        field_pos: '2'
+      - name: int1_drive_circuit
+        field_pos: '1'
+      - name: int1_polarity
+        field_pos: '0'
+  - name: temp_data
+    address: 0x09
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: accel_data_x
+    address: 0x0b
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: accel_data_y
+    address: 0x0d
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: accel_data_z
+    address: 0x0f
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: gyro_data_x
+    address: 0x11
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: gyro_data_y
+    address: 0x13
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: gyro_data_z
+    address: 0x15
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x80
+    fields:
+  - name: tmst_fsynch
+    address: 0x17
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x0
+    fields:
+  - name: apex_data4
+    address: 0x1d
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x0
+    fields:
+      - name: ff_dur_7_0
+        field_pos: '[7:0]'
+  - name: apex_data5
+    address: 0x1e
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x0
+    fields:
+      - name: ff_dur_15_8
+        field_pos: '[7:0]'
+  - name: pwr_mgmt0
+    address: 0x1f
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x0
+    fields:
+      - name: accel_lp_clk_sel
+        field_pos: '7'
+      - name: idle
+        field_pos: '4'
+      - name: gyro_mode
+        field_pos: '[3:2]'
+      - name: accel_mode
+        field_pos: '[1:0]'
+  - name: gyro_config0
+    address: 0x20
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x06
+    fields:
+      - name: gyro_ui_fs_sel
+        field_pos: '[6:5]'
+      - name: gyro_odr
+        field_pos: '[3:0]'
+  - name: accel_config0
+    address: 0x21
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x06
+    fields:
+      - name: accel_ui_fs_sel
+        field_pos: '[6:5]'
+      - name: accel_odr
+        field_pos: '[3:0]'
+  - name: temp_config0
+    address: 0x22
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: temp_filt_bw
+        field_pos: '[6:4]'
+  - name: gyro_config1
+    address: 0x23
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x31
+    fields:
+      - name: gyro_ui_filt_bw
+        field_pos: '[2:0]'
+  - name: accel_config1
+    address: 0x24
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x41
+    fields:
+      - name: accel_ui_avg
+        field_pos: '[6:4]'
+      - name: accel_ui_filt_bw
+        field_pos: '[2:0]'
+  - name: apex_config0
+    address: 0x25
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x8
+    fields:
+      - name: dmp_power_save_en
+        field_pos: '3'
+      - name: dmp_init_en
+        field_pos: '2'
+      - name: dmp_mem_reset_en
+        field_pos: '0'
+  - name: apex_config1
+    address: 0x26
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x02
+    fields:
+      - name: smd_enable
+        field_pos: '6'
+      - name: ff_enable
+        field_pos: '5'
+      - name: tilt_enable
+        field_pos: '4'
+      - name: ped_enable
+        field_pos: '3'
+      - name: dmp_odr
+        field_pos: '[1:0]'
+  - name: wom_config
+    address: 0x27
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: wom_int_dur
+        field_pos: '[4:3]'
+      - name: wom_int_mode
+        field_pos: '2'
+      - name: wom_mode
+        field_pos: '1'
+      - name: wom_en
+        field_pos: '0'
+  - name: fifo_config1
+    address: 0x28
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x1
+    fields:
+      - name: fifo_mode
+        field_pos: '1'
+      - name: fifo_bypass
+        field_pos: '0'
+  - name: fifo_config2
+    address: 0x29
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: fifo_wm_7_0
+        field_pos: '[7:0]'
+  - name: fifo_config3
+    address: 0x2a
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: fifo_wm_11_8
+        field_pos: '[3:0]'
+  - name: int_source0
+    address: 0x2b
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x10
+    fields:
+      - name: st_int1_en
+        field_pos: '7'
+      - name: fsync_int1_en
+        field_pos: '6'
+      - name: pll_rdy_int1_en
+        field_pos: '5'
+      - name: reset_done_int1_en
+        field_pos: '4'
+      - name: drdy_int1_en
+        field_pos: '3'
+      - name: fifo_ths_int1_en
+        field_pos: '2'
+      - name: fifo_full_int1_en
+        field_pos: '1'
+      - name: agc_rdy_int1_en
+        field_pos: '0'
+  - name: int_source1
+    address: 0x2c
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: i32_protocol_error_int1_en
+        field_pos: '6'
+      - name: smd_int1_en
+        field_pos: '3'
+      - name: wom_z_int1_en
+        field_pos: '2'
+      - name: wom_y_int1_en
+        field_pos: '1'
+      - name: wom_x_int1_en
+        field_pos: '0'
+  - name: int_source3
+    address: 0x2d
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: st_int2_en
+        field_pos: '7'
+      - name: fsync_int2_en
+        field_pos: '6'
+      - name: pll_rdy_int2_en
+        field_pos: '5'
+      - name: reset_done_int2_en
+        field_pos: '4'
+      - name: drdy_int2_en
+        field_pos: '3'
+      - name: fifo_ths_int2_en
+        field_pos: '2'
+      - name: fifo_full_int2_en
+        field_pos: '1'
+      - name: agc_rdy_int2_en
+        field_pos: '0'
+  - name: int_source4
+    address: 0x2e
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: i32_protocol_error_int2_en
+        field_pos: '6'
+      - name: smd_int2_en
+        field_pos: '3'
+      - name: wom_z_int2_en
+        field_pos: '2'
+      - name: wom_y_int2_en
+        field_pos: '1'
+      - name: wom_x_int2_en
+        field_pos: '0'
+  - name: fifo_lost_pkt0
+    size: 1
+    address: 0x2f
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: fifo_lost_pkt_cnt_7_0
+        field_pos: '[7:0]'
+  - name: fifo_lost_pkt1
+    size: 1
+    address: 0x30
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: fifo_lost_pkt_cnt_15_8
+        field_pos: '[7:0]'
+  - name: apex_data0
+    size: 1
+    address: 0x31
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: step_cnt_7_0
+        field_pos: '[7:0]'
+  - name: apex_data1
+    size: 1
+    address: 0x32
+    readable: true
+    writable: false 
+    reset_val: 0x00
+    fields:
+      - name: step_cnt_15_8
+        field_pos: '[7:0]'
+  - name: apex_data2
+    size: 1
+    address: 0x33
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: step_cadence
+        field_pos: '[7:0]'
+  - name: apex_data3
+    size: 1
+    address: 0x34
+    readable: true
+    writable: false
+    reset_val: 0x04
+    fields:
+      - name: dmp_idle
+        field_pos: '2'
+      - name: activity_class
+        field_pos: '[1:0]'
+  - name: intf_config0
+    address: 0x35
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x30
+    fields:
+      - name: fifo_count_format
+        field_pos: '6'
+      - name: fifo_count_endian
+        field_pos: '5'
+      - name: sensor_data_endian
+        field_pos: '4'
+  - name: intf_config1
+    address: 0x36
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x4d
+    fields:
+      - name: i3c_sdr_en
+        field_pos: '3'
+      - name: i3c_ddr_en
+        field_pos: '2'
+      - name: clksel
+        field_pos: '[1:0]'
+  - name: int_status_drdy
+    address: 0x39
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: data_rdy_int
+        field_pos: '0'
+  - name: int_status
+    address: 0x3a
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x10
+    fields:
+      - name: st_int
+        field_pos: '7'
+      - name: fsync_int
+        field_pos: '6'
+      - name: pll_rdy_int
+        field_pos: '5'
+      - name: reset_done_int
+        field_pos: '4'
+      - name:  fifo_ths_int
+        field_pos: '2'
+      - name: fifo_full_int
+        field_pos: '1'
+      - name: agc_rdy_int
+        field_pos: '0'
+  - name: int_status2
+    address: 0x3b
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: smd_int
+        field_pos: '3'
+      - name: wom_x_int
+        field_pos: '2'
+      - name: wom_y_int
+        field_pos: '1'
+      - name: wom_z_int
+        field_pos: '0'
+  - name: int_status3
+    address: 0x3c
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+      - name: step_det_int
+        field_pos: '5'
+      - name: step_cnt_ovf_int
+        field_pos: '4'
+      - name: tilt_det_int
+        field_pos: '3'
+      - name: ff_det_int
+        field_pos: '2'
+      - name: lowg_det_int
+        field_pos: '1'
+  - name: fifo_count
+    address: 0x3d
+    size: 2
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+  - name: fifo_data
+    address: 0x3f
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0xff
+    fields:
+  - name: who_am_i
+    address: 0x75
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x67
+    fields:
+      - name: whoami
+        field_pos: '[7:0]'
+  - name: blk_sel_w
+    address: 0x79
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: maddr_w
+    address: 0x7a
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: m_w
+    address: 0x7b
+    size: 1
+    readable: false
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: blk_sel_r
+    address: 0x7c
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+  - name: maddr_r
+    address: 0x7d
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: m_r
+    address: 0x7e
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:

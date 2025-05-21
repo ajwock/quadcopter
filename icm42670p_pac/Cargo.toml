@@ -1,0 +1,12 @@
+[package]
+name = "icm42670p_pac"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[build-dependencies]
+regcommsgen = { git = "https://github.com/ajwock/regcomms.git", package = "regcommsgen" }
+
+[dependencies]
+regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
+#regcomms = "0.1.0"
