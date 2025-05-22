@@ -1,8 +1,8 @@
 use core::result::Result;
 use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
-pub struct OffsetUser0<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
-impl<'a, C: RegComms<1, u8>> OffsetUser0<'a, C> {
+pub struct OffsetUser0<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>>(pub &'a mut Icm42670P<D, C>);
+impl<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> OffsetUser0<'a, D, C> {
     pub fn read(&mut self) -> Result<OffsetUser0Val, RegCommsError> {
         let mut buf = [0u8; 1];
         let proc = self.0.mreg_1;

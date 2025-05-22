@@ -8,6 +8,7 @@ build = "build.rs"
 regcommsgen = { git = "https://github.com/ajwock/regcomms.git", package = "regcommsgen" }
 
 [dependencies]
+embedded-hal-async = "1.0.0"
 regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
-spin = { version = "0.10.0", features = ["once"] }
+spin = { version = "0.10.0", features = ["once", "portable_atomic"] }
 #regcomms = "0.1.0"

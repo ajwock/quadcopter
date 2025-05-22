@@ -1,8 +1,8 @@
 use core::result::Result;
 use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
-pub struct GyroConfig1<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
-impl<'a, C: RegComms<1, u8>> GyroConfig1<'a, C> {
+pub struct GyroConfig1<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>>(pub &'a mut Icm42670P<D, C>);
+impl<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> GyroConfig1<'a, D, C> {
     pub fn read(&mut self) -> Result<GyroConfig1Val, RegCommsError> {
         let mut buf = [0u8; 1];
         let proc = self.0.standard;

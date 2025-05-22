@@ -1,8 +1,8 @@
 use core::result::Result;
 use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
-pub struct MW<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
-impl<'a, C: RegComms<1, u8>> MW<'a, C> {
+pub struct MW<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>>(pub &'a mut Icm42670P<D, C>);
+impl<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> MW<'a, D, C> {
     pub fn write(&mut self, val: MWVal) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
         let proc = self.0.standard;

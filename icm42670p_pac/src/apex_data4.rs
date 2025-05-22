@@ -1,8 +1,8 @@
 use core::result::Result;
 use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
-pub struct ApexData4<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
-impl<'a, C: RegComms<1, u8>> ApexData4<'a, C> {
+pub struct ApexData4<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>>(pub &'a mut Icm42670P<D, C>);
+impl<'a, D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> ApexData4<'a, D, C> {
     pub fn read(&mut self) -> Result<ApexData4Val, RegCommsError> {
         let mut buf = [0u8; 1];
         let proc = self.0.standard;

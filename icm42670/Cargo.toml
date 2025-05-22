@@ -1,0 +1,10 @@
+[package]
+name = "icm42670"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embedded-hal-async = "1.0.0"
+icm42670p_pac = { path = "../icm42670p_pac" }
+regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
+

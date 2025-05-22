@@ -1,11 +1,13 @@
 use regcomms::{RegCommsAccessProc, RegComms, RegCommsError};
 use crate::Icm42670P;
 
+use embedded_hal_async::delay::DelayNs;
+
 #[derive(Default)]
 pub struct Mreg1;
 
-impl<C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<C>, 1, u8> for Mreg1 {
-    fn proc_read(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &mut [u8]) -> Result<(), RegCommsError> {
+impl<D: DelayNs, C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<D, C>, 1, u8> for Mreg1 {
+    fn proc_read(&self, peripheral: &mut Icm42670P<D, C>, reg_address: u8, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_r().modify(|mut val| {
             val.set(1);
@@ -22,9 +24,10 @@ impl<C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<C>, 1, u8> for Mreg1 {
         peripheral.blk_sel_r().modify(|mut val| {
             val.set(0);
             val
-        })
+        })?;
+        Ok(1)
     }
-    async fn proc_read_async(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    async fn proc_read_async(&self, peripheral: &mut Icm42670P<D, C>, reg_address: u8, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_r().modify_async(|mut val| {
             val.set(1);
@@ -35,16 +38,18 @@ impl<C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<C>, 1, u8> for Mreg1 {
             val
         }).await?;
         // delay 10us
+        peripheral.delay.delay_us(10).await;
         let val = peripheral.m_r().read_async().await?.get();
-        // delay 10us
+        peripheral.delay.delay_us(10).await;
         buf[0] = val;
         peripheral.blk_sel_r().modify_async(|mut val| {
             val.set(0);
             val
-        }).await
+        }).await?;
+        Ok(1)
     }
 
-    fn proc_write(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &[u8]) -> Result<(), RegCommsError> {
+    fn proc_write(&self, peripheral: &mut Icm42670P<D, C>, reg_address: u8, buf: &[u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_w().modify(|mut val| {
             val.set(1);
@@ -60,9 +65,10 @@ impl<C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<C>, 1, u8> for Mreg1 {
         peripheral.blk_sel_w().modify(|mut val| {
             val.set(0);
             val
-        })
+        })?;
+        Ok(1)
     }
-    async fn proc_write_async(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &[u8]) -> Result<(), RegCommsError> {
+    async fn proc_write_async(&self, peripheral: &mut Icm42670P<D, C>, reg_address: u8, buf: &[u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_w().modify_async(|mut val| {
             val.set(1);
@@ -72,12 +78,13 @@ impl<C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<C>, 1, u8> for Mreg1 {
             val.set(reg_address);
             val
         }).await?;
-        // delay 10us
+        peripheral.delay.delay_us(10).await;
         peripheral.m_w().write_raw_async(buf[0]).await?;
-        // delay 10us
+        peripheral.delay.delay_us(10).await;
         peripheral.blk_sel_w().modify_async(|mut val| {
             val.set(0);
             val
-        }).await
+        }).await?;
+        Ok(1)
     }
 }

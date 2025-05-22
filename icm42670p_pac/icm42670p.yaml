@@ -6,6 +6,11 @@ non_standard_access_procs:
     struct_path: "crate::bank_access::Mreg1"
 extra_mods:
   - "bank_access"
+trait_members:
+  - name: "delay"
+    generic_type: "D"
+    trait_bound: "embedded_hal_async::delay::DelayNs"
+
 registers:
   - name: rdy
     address: 0x0
@@ -539,6 +544,7 @@ registers:
     readable: true
     writable: false
     reset_val: 0xff
+    data_port: true
     fields:
   - name: who_am_i
     address: 0x75

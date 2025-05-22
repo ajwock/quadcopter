@@ -9,6 +9,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
+name = "either"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
 name = "embedded-hal"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -39,6 +45,7 @@ checksum = "84b26c544d002229e640969970a2e74021aadf6e2f96372b9c58eff97de08eb3"
 name = "icm42670p_pac"
 version = "0.1.0"
 dependencies = [
+ "embedded-hal-async",
  "regcomms",
  "regcommsgen",
  "spin",
@@ -52,6 +59,15 @@ checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -69,6 +85,12 @@ dependencies = [
  "autocfg",
  "scopeguard",
 ]
+
+[[package]]
+name = "portable-atomic"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "350e9b48cbc6b0e028b0473b114454c6316e57336ee184ceab6e53f72c178b3e"
 
 [[package]]
 name = "proc-macro2"
@@ -91,7 +113,7 @@ dependencies = [
 [[package]]
 name = "regcomms"
 version = "0.1.0"
-source = "git+https://github.com/ajwock/regcomms.git#226f248b1df46ecbb18fe270ca2c02152e30f727"
+source = "git+https://github.com/ajwock/regcomms.git#67a09d16cba71bdd6b003562eec86da6ad849930"
 dependencies = [
  "embedded-hal-async",
 ]
@@ -99,8 +121,9 @@ dependencies = [
 [[package]]
 name = "regcommsgen"
 version = "0.1.0"
-source = "git+https://github.com/ajwock/regcomms.git#226f248b1df46ecbb18fe270ca2c02152e30f727"
+source = "git+https://github.com/ajwock/regcomms.git#67a09d16cba71bdd6b003562eec86da6ad849930"
 dependencies = [
+ "itertools",
  "serde",
  "serde_yaml",
  "stringcase",
@@ -158,6 +181,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5fe4ccb98d9c292d56fec89a5e07da7fc4cf0dc11e156b41793132775d3e591"
 dependencies = [
  "lock_api",
+ "portable-atomic",
 ]
 
 [[package]]
