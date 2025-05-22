@@ -6,9 +6,13 @@ mod generic_config;
 mod config;
 
 pub use config::Config;
-pub use accel_config::AccelConfig;
-pub use gyro_config::GyroConfig;
+pub use accel_config::{AccelConfig, AccelRange};
+pub use gyro_config::{GyroConfig, GyroRange};
 pub use fifo_config::FifoConfig;
+pub use generic_config::{
+    ODR,
+    DLPF,
+};
 
 use icm42670p_pac::Icm42670P;
 use regcomms::{RegComms, RegCommsError};
@@ -35,10 +39,7 @@ impl<D: DelayNs + Clone, C: RegComms<1, u8>> Icm42670<D, C> {
     }
 
     pub async fn poweron_idle(&mut self) -> Result<(), RegCommsError> {
-        self.p.pwr_mgmt0().modify_async(|mut val| {
-            val.idle().set_bit();
-            val
-        }).await
+        self.p.pwr_mgmt0().write_raw_async(0b00010000).await
     }
 
     pub async fn configure_accelerometer(&mut self, accel_cnf: AccelConfig) -> Result<(), RegCommsError> {
@@ -83,13 +84,19 @@ impl<D: DelayNs + Clone, C: RegComms<1, u8>> Icm42670<D, C> {
             val
         }).await?;
         // We keep most defaults but tmst in fifo is not fsync
+        let mut saved_val = 0;
         self.p.fifo_config5().modify_async(|mut val| {
             val
                 .fifo_accel_en().assign(conf.accel_config.is_some())
                 .fifo_gyro_en().assign(conf.gyro_config.is_some())
                 .fifo_tmst_fsync_en().clear_bit();
+            saved_val = val.get();
             val
         }).await?;
+        let readback_val = self.p.fifo_config5().read_async().await?.get();
+        if saved_val != readback_val {
+            panic!("Alert!  saved_val 0x{:x} != 0x{:x} readback value for fifo_config5", saved_val, readback_val);
+        }
         self.p.fifo_config1().modify_async(|mut val| {
             val
                 .fifo_mode().assign(fifo_config.mode.to_bit());
@@ -150,6 +157,7 @@ impl<D: DelayNs + Clone, C: RegComms<1, u8>> Icm42670<D, C> {
         if let Some(gyrometer_config) = conf.gyro_config {
             self.configure_gyrometer(gyrometer_config).await?;
         }
+        self.fifo_configure(conf).await?;
         self.conf = conf;
         Ok(())
     }

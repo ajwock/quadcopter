@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-mod icm42670;
 mod imu_common;
 mod motor_drive;
 mod motion_data;
@@ -10,6 +9,7 @@ mod orientation_tracking;
 mod utils;
 mod receiver;
 mod delay_buf;
+mod icm42670_imu;
 
 use motion_data::DegreeFixed32;
 use fixed_macro::fixed;
@@ -209,7 +209,7 @@ async fn main(spawner: Spawner) {
     }
 
 
-    CONTROLLER_CONNECTED.wait().await;
+    //CONTROLLER_CONNECTED.wait().await;
     /* IMU SETUP */
     let mut conn_led = Output::new(
         peripherals.GPIO8,
@@ -262,10 +262,13 @@ async fn main(spawner: Spawner) {
     let comms = i2c;
     let i2c_comms = I2cCommsAsync::new(comms)
         .with_address(0b1101000);
-    let mut imu = Icm42670::new(i2c_comms); 
+    let mut imu = Icm42670::new(i2c_comms, embassy_time::Delay); 
     let mut ticker = Ticker::every(Duration::from_millis(10));
-    imu.configure2(config).await.unwrap();
-    imu.full_enable().await;
+    //println!("Powering on");
+    println!("Configuring");
+    imu.configure(config).await.unwrap();
+    println!("Configured");
+    imu.enable().await.unwrap();
  
     for i in 0..100 {
         let mut good_packets = 0;
@@ -283,12 +286,13 @@ async fn main(spawner: Spawner) {
         println!("{i}: {good_packets} packets");
         ticker.next().await;
     }
+    println!("Starting calibration");
     let mut calibrator = ImuCalibrator::<_, 1024>::new(imu);
     // Tick the calibrator state machine until it's done
     let mut imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
     let gravmag = imuctl.gravity_mag();
 
-    debug_println!("Initializing motor pwms");
+    println!("Initializing motor pwms");
     let mut ledc = Ledc::new(peripherals.LEDC);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
     static LSTIMER0: StaticCell<ledc::timer::Timer<'_, ledc::LowSpeed>> = StaticCell::new();
@@ -341,6 +345,7 @@ async fn main(spawner: Spawner) {
     imuctl.flush_msgs().await;
     let mut orientation_tracker = OrientationTracker::new(imuctl);
     let mut led_tick_reducer = 0;
+    println!("Starting main loop");
     loop {
         if led_tick_reducer == 20 {
             led.toggle();

@@ -8,7 +8,6 @@ name = "quadcopter"
 path = "./src/main.rs"
 
 [dependencies]
-icm42670p_pac = { path = "../icm42670p_pac" }
 embassy-net = { version = "0.6.0", features = [
   "dhcpv4",
   "medium-ethernet",
@@ -66,6 +65,7 @@ embedded-hal-async = "1.0.0"
 embassy-futures = "0.1.1"
 fixed-macro = "1.2.0"
 regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
+icm42670 = { path = "../icm42670" }
 
 [profile.dev]
 # Rust debug is too slow.

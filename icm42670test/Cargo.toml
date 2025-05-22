@@ -23,6 +23,8 @@ esp-println = { version = "0.13.0", features = ["defmt-espflash", "esp32c3"] }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 icm42670 = { path = "../icm42670" }
 regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
+esp-backtrace = { version = "0.15.1", features = ["defmt", "esp32c3", "panic-handler", "exception-handler"] }
+embedded-hal-async = "1.0.0"
 
 [profile.dev]
 # Rust debug is too slow.

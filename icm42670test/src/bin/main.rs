@@ -4,23 +4,27 @@
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::{Delay, Duration, Ticker};
+use embedded_hal_async::delay::DelayNs;
 use esp_hal::clock::CpuClock;
 use esp_hal::time::Rate;
 use esp_hal::timer::systimer::SystemTimer;
 use esp_hal::i2c;
 use esp_println as _;
 
-#[panic_handler]
-fn panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
-
+use esp_backtrace as _;
 extern crate alloc;
 
 use icm42670::{
     Icm42670,
     AccelConfig,
     GyroConfig,
+};
+
+use esp_hal::gpio::{
+    self,
+    Output,
+    Level,
+    OutputConfig,
 };
 use regcomms::i2c::I2cCommsAsync;
 
@@ -40,7 +44,7 @@ async fn main(spawner: Spawner) {
 
     // TODO: Spawn some tasks
     let _ = spawner;
-    let i2c = i2c::master::I2c::new(
+    let mut i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
             .with_frequency(Rate::from_khz(1000)))
@@ -48,10 +52,29 @@ async fn main(spawner: Spawner) {
     .with_sda(peripherals.GPIO10)
     .with_sda(peripherals.GPIO4)
     .into_async();
+    // Pull the ad0 pin low.
+    let mut ad0 = Output::new(
+        peripherals.GPIO1,
+        Level::Low,
+        OutputConfig::default(),
+    );
+    ad0.set_low();
+    // Pull the icm42670 'cs' pin low (it's unused for i2c)
+    let mut cs = Output::new(
+        peripherals.GPIO5,
+        Level::High,
+        OutputConfig::default(),
+    );
+    cs.set_high();
+    Delay.delay_us(200).await;
+    info!("I2c raw write");
+    let mut idbuf = [0u8];
+    i2c.write_read_async(0b1101000, &[0x73], &mut idbuf).await.unwrap();
+    assert_eq!(idbuf[0], 0x67);
+    info!("Power on...");
     let i2c_async = I2cCommsAsync::new(i2c)
         .with_address(0b1101000);
     let mut icm = Icm42670::new(i2c_async, Delay);
-    info!("Power on...");
     icm.poweron_idle().await.unwrap();
     info!("Verifying identity...");
     icm.verify_identity().await.unwrap();
