@@ -9,4 +9,5 @@ regcommsgen = { git = "https://github.com/ajwock/regcomms.git", package = "regco
 
 [dependencies]
 regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
+spin = { version = "0.10.0", features = ["once"] }
 #regcomms = "0.1.0"

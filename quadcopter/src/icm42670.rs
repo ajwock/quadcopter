@@ -1,4 +1,3 @@
-use esp_hal::i2c::master::{I2c, Operation};
 use esp_hal::Async;
 use alloc::format;
 use esp_println::println;
@@ -13,13 +12,18 @@ use crate::imu_common::{
     ImuMsg,
     ImuError,
 };
+use icm42670p_pac::{
+    Icm42670P,
+    AccessProc,
+};
+use regcomms::{RegComms, RegCommsError};
 use esp_hal::i2c;
 
 // 7 bit address of the accelerometer
 pub const ACCEL_ADDRESS: u8 = 0b1101000;
 
-pub struct Icm42670<'a> {
-    comm: I2c<'a, Async>,
+pub struct Icm42670<C: RegComms<1, u8>> {
+    pub p: Icm42670P<C>,
     pub calibration_offsets: MotionData,
     pub prev_motion_data: MotionData,
 }
@@ -304,62 +308,18 @@ impl Default for Config {
     }
 }
 
-impl<'a> Icm42670<'a> {
-    pub fn new(i2c: I2c<'a, Async>) -> Self {
+impl<C: RegComms<1, u8>> Icm42670<C> {
+    pub fn new(comms: C) -> Self {
         Self {
-            comm: i2c,
+            p: Icm42670P(comms),
             calibration_offsets: MotionData::zero(),
             prev_motion_data: MotionData::zero(),
         }
     }
 
-    async fn write_reg(&mut self, reg_address: u8, val: u8) -> Result<(), i2c::master::Error> {
-        self.comm.write_async(ACCEL_ADDRESS, &[reg_address, val])
-            .await
-    }
-
-    async fn burst_write_regs(&mut self, start_address: u8, reg_vals: &[u8]) -> Result<(), i2c::master::Error> {
-        let mut to_write = SmallVec::<[u8; 32]>::new();
-        to_write.push(start_address);
-        to_write.extend_from_slice(reg_vals);
-        self.comm.write_async(ACCEL_ADDRESS, to_write.as_slice())
-            .await
-    }
-
-    // Registers have an 8-bit address
-    async fn read_reg(&mut self, reg_address: u8) -> Result<u8, i2c::master::Error> {
-        let mut datum = 0;
-        self.comm.write_read_async(ACCEL_ADDRESS, &[reg_address], core::slice::from_mut(&mut datum))
-            .await?;
-        Ok(datum)
-    }
-
-    async fn burst_read_regs(&mut self, start_address: u8, regs_out: &mut [u8]) -> Result<(), i2c::master::Error> {
-        self.comm.write_read(ACCEL_ADDRESS, &[start_address], regs_out)
-    }
-
-/*    pub async fn configure(&mut self) {
-        println!("Power on ICM42670");
-        self.write_reg(0x1f, 0x0f).await;
-        println!("ICM42680 powered on, verifying identity");
-        let id = self.read_reg(0x75).await;
-        println!("Got id: 0x{:x}", id);
-        if id != 0x67 {
-            panic!("Device not identified as icm42760, expected 0x67 but got 0x{:x}", id);
-        }
-        println!("Configuring accelerometer and gyro");
-        let configuration_data = &[
-            0b0000_1010, // +-2000 deg/s, Gyro ODR selection: 50hz
-            0b0100_1010, // +-8g, Accel ODR selection: 50hz,
-            0b0100_0000, // Temp DLPF: 16Hz,
-            0b0000_0010, // Gyro DLPF: 121Hz,
-            0b0000_0010, // Accel DLPF: 121Hz,
-        ];
-        self.burst_write_regs(0x20, configuration_data).await;
-        println!("ICM42680 configured");
-    }*/
-
-    pub async fn write_block_reg(&mut self, blk: BlkSel, address: u8, value: u8) -> Result<(), i2c::master::Error> {
+    pub async fn write_block_reg(&mut self, blk: BlkSel, address: u8, value: u8) -> Result<(), RegCommsError> {
+        todo!()
+        /*
         let block_sel = blk.block_sel_val();
         self.burst_write_regs(0x79, &[block_sel, address]).await;
         // Note, per section 14 of the datasheet we must wait 10us before write,
@@ -369,9 +329,12 @@ impl<'a> Icm42670<'a> {
         self.write_reg(0x7b, value).await?;
         d.delay_us(10).await;
         self.write_reg(0x7a, 0).await
+        */
     }
 
-    pub async fn read_block_reg(&mut self, blk: BlkSel, address: u8) -> Result<u8, i2c::master::Error> {
+    pub async fn read_block_reg(&mut self, blk: BlkSel, address: u8) -> Result<u8, RegCommsError> {
+        todo!()
+            /*
         let block_sel = blk.block_sel_val();
         self.burst_write_regs(0x7C, &[block_sel, address]).await;
         let mut d = embassy_time::Delay;
@@ -380,9 +343,11 @@ impl<'a> Icm42670<'a> {
         d.delay_us(10).await;
         self.write_reg(0x7c, 0).await?;
         Ok(read_val)
+            */
     }
-
-    pub async fn fifo_configure(&mut self, conf: Config) -> Result<(), i2c::master::Error> {
+    pub async fn fifo_configure(&mut self, conf: Config) -> Result<(), RegCommsError> {
+        todo!()
+            /*
         let Some(fifo_config) = conf.fifo_config else {
             panic!("Need fifo config");
         };
@@ -415,10 +380,63 @@ impl<'a> Icm42670<'a> {
         conf1_flags |= fifo_config.mode.to_bits() << 1;
         self.write_reg(0x28, conf1_flags).await?;
         Ok(())
+            */
     }
 
-    pub async fn configure2(&mut self, conf: Config) -> Result<(), i2c::master::Error> {
+    pub async fn verify_identity(&mut self) -> Result<bool, RegCommsError> {
+        println!("Verifying identity");
+        let id = self.p.who_am_i().read_async().await?.get();
+        if id != 0x67 {
+            println!("Device not identified as icm42670, expected 0x67 but got 0x{:x}", id);
+            Ok(false)
+        } else {
+            Ok(true)
+        }
+    }
+
+    pub async fn configure2(&mut self, conf: Config) -> Result<(), RegCommsError> {
         println!("Idle on ICM42670");
+        self.p.pwr_mgmt0().modify_async(|mut val| {
+            val.idle().set_bit();
+            val
+        }).await?;
+
+        if !self.verify_identity().await? {
+            return Err(RegCommsError::Other);
+        }
+        println!("Identity verified.  Configuring icm42670");
+        let accel_cnf = conf.accel_config.unwrap_or_default();
+        let gyro_cnf = conf.gyro_config.unwrap_or_default();
+        self.p.gyro_config0().modify_async(|mut val| {
+            val
+                 .gyro_ui_fs_sel().set(gyro_cnf.gyro_range.to_bits())
+                 .gyro_odr().set(gyro_cnf.gyro_odr.to_bits());
+            val
+        }).await?;
+        self.p.accel_config0().modify_async(|mut val| {
+            val
+                .accel_ui_fs_sel().set(accel_cnf.accel_range.to_bits())
+                .accel_odr().set(accel_cnf.accel_odr.to_bits());
+            val
+        }).await?;
+        self.p.temp_config0().modify_async(|mut val| {
+            val
+                .temp_filt_bw().set(0b100);
+            val
+        }).await?;
+        self.p.gyro_config1().modify_async(|mut val| {
+            val
+                .gyro_ui_filt_bw().set(gyro_cnf.gyro_range.to_bits());
+            val
+        }).await?;
+        self.p.accel_config1().modify_async(|mut val| {
+            val
+                .accel_ui_filt_bw().set(accel_cnf.accel_range.to_bits());
+            val
+        }).await?;
+        todo!()
+            /*
+
         self.write_reg(0x1f, 0b00010000).await?;
         let mut d = embassy_time::Delay;
         d.delay_us(200).await;
@@ -440,15 +458,21 @@ impl<'a> Icm42670<'a> {
         self.burst_write_regs(0x20, configuration_data).await?;
         self.fifo_configure(conf).await?;
         Ok(())
+            */
     }
 
     pub async fn full_enable(&mut self) {
+        todo!()
+            /*
         self.write_reg(0x1f, 0x0f).await;
         let mut d = embassy_time::Delay;
         d.delay_us(200).await;
+            */
     }
 
-    pub async fn flush_fifo(&mut self) -> Result<(), i2c::master::Error> {
+    pub async fn flush_fifo(&mut self) -> Result<(), RegCommsError> {
+        todo!()
+            /*
         self.write_reg(0x02, 1 << 2).await?;
         embassy_time::Delay.delay_ns(1500).await;
         let flushed = (self.read_reg(0x02).await? & 0b100) == 0;
@@ -456,9 +480,12 @@ impl<'a> Icm42670<'a> {
             println!("Note, failed to flush fifo");
         }
         Ok(())
+            */
     }
 
-    pub async fn read_fifo_packet(&mut self) -> Result<Option<FifoPacket>, i2c::master::Error> {
+    pub async fn read_fifo_packet(&mut self) -> Result<Option<FifoPacket>, RegCommsError> {
+        todo!()
+            /*
         let mut buf = [0; 16];
         let portion = &mut buf[0..16];
         let _ = self.burst_read_regs(0x3f, portion).await?;
@@ -510,9 +537,12 @@ impl<'a> Icm42670<'a> {
             None
         };
         Ok(Some(FifoPacket { accel_data, gyro_data, temp_data, timestamp }))
+            */
     }
 
     pub async fn read_motion_data(&mut self) -> MotionData {
+        todo!()
+        /*
         let mut outbuf = [0; 12];
         if let Err(_) = self.burst_read_regs(0x0b, &mut outbuf).await {
             return self.prev_motion_data
@@ -527,10 +557,11 @@ impl<'a> Icm42670<'a> {
         };
         self.prev_motion_data = out;
         out
+        */
     }
 }
 
-impl Imu for Icm42670<'_> {
+impl<C: RegComms<1, u8>> Imu for Icm42670<C> {
     async fn read_motion_data_raw(&mut self) -> MotionData {
         self.read_motion_data().await
     }

@@ -1,29 +1,53 @@
 use core::result::Result;
-use regcomms::{RegCommsError, RegComms};
+use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
 pub struct DeviceConfig<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
 impl<'a, C: RegComms<1, u8>> DeviceConfig<'a, C> {
     pub fn read(&mut self) -> Result<DeviceConfigVal, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read(0x1, &mut buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_read(&mut self.0, 0x1, &mut buf)?;
         let val = u8::from_be_bytes(buf);
         Ok(DeviceConfigVal(val))
     }
     pub async fn read_async(&mut self) -> Result<DeviceConfigVal, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read_async(0x1, &mut buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_read_async(&mut self.0, 0x1, &mut buf).await?;
         let val = u8::from_be_bytes(buf);
         Ok(DeviceConfigVal(val))
     }
     pub fn write(&mut self, val: DeviceConfigVal) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
-        self.0.comms_write(0x1, &buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_write(&mut self.0, 0x1, &buf)?;
         Ok(())
+    }
+    pub fn write_raw(&mut self, raw_val: u8) -> Result<(), RegCommsError> {
+        self.write(DeviceConfigVal(raw_val))
     }
     pub async fn write_async(&mut self, val: DeviceConfigVal) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
-        self.0.comms_write_async(0x1, &buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_write_async(&mut self.0, 0x1, &buf).await?;
         Ok(())
+    }
+    pub async fn write_raw_async(&mut self, raw_val: u8) -> Result<(), RegCommsError> {
+        self.write_async(DeviceConfigVal(raw_val)).await
+    }
+    pub fn modify<F: FnOnce(DeviceConfigVal) -> DeviceConfigVal>(&mut self, f: F) -> Result<(), RegCommsError> {
+        let orig_val = self.read()?;
+        self.write(f(orig_val))
+    }
+    pub async fn modify_async<F: FnOnce(DeviceConfigVal) -> DeviceConfigVal>(&mut self, f: F) -> Result<(), RegCommsError> {
+        let orig_val = self.read_async().await?;
+        self.write_async(f(orig_val)).await
+    }
+    pub fn reset(&mut self) -> Result<(), RegCommsError> {
+        self.write(DeviceConfigVal(0x4))
+    }
+    pub async fn reset_async(&mut self) -> Result<(), RegCommsError> {
+        self.write_async(DeviceConfigVal(0x4)).await
     }
 }
 pub struct DeviceConfigVal(pub u8);
@@ -32,17 +56,23 @@ impl DeviceConfigVal {
         self.0
     }
     pub fn zero() -> Self {
-         Self(0)
+        Self(0)
     }
-    pub fn spi_ap_4_wire<'a>(&'a mut self) -> SpiAp4Wire<'a> {
-        SpiAp4Wire(self)
+    pub fn set(&mut self, val: u8) {
+        self.0 = val;
     }
-    pub fn spi_mode<'a>(&'a mut self) -> SpiMode<'a> {
-        SpiMode(self)
+    pub fn reset_val() -> Self {
+        Self(0x4)
+    }
+    pub fn spi_ap_4_wire<'a>(&'a mut self) -> FieldSpiAp4Wire<'a> {
+        FieldSpiAp4Wire(self)
+    }
+    pub fn spi_mode<'a>(&'a mut self) -> FieldSpiMode<'a> {
+        FieldSpiMode(self)
     }
 }
-pub struct SpiAp4Wire<'a>(pub &'a mut DeviceConfigVal);
-impl<'a> SpiAp4Wire<'a> {
+pub struct FieldSpiAp4Wire<'a>(pub &'a mut DeviceConfigVal);
+impl<'a> FieldSpiAp4Wire<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 2) & 1) != 0
     }
@@ -51,7 +81,7 @@ impl<'a> SpiAp4Wire<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut DeviceConfigVal {
         self.0.0 &= !(1 << 2);
-        self.0.0 |= !(!(val as u8) << 2);
+        self.0.0 |= (val as u8) << 2;
         self.0
     }
     pub fn set_bit(self) -> &'a mut DeviceConfigVal {
@@ -60,9 +90,14 @@ impl<'a> SpiAp4Wire<'a> {
     pub fn clear_bit(self) -> &'a mut DeviceConfigVal {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut DeviceConfigVal {
+        self.0.0 &= !(1 << 2);
+        self.0.0 |= (1 << 2) & 0x4;
+        self.0
+    }
 }
-pub struct SpiMode<'a>(pub &'a mut DeviceConfigVal);
-impl<'a> SpiMode<'a> {
+pub struct FieldSpiMode<'a>(pub &'a mut DeviceConfigVal);
+impl<'a> FieldSpiMode<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 0) & 1) != 0
     }
@@ -71,7 +106,7 @@ impl<'a> SpiMode<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut DeviceConfigVal {
         self.0.0 &= !(1 << 0);
-        self.0.0 |= !(!(val as u8) << 0);
+        self.0.0 |= (val as u8) << 0;
         self.0
     }
     pub fn set_bit(self) -> &'a mut DeviceConfigVal {
@@ -79,5 +114,10 @@ impl<'a> SpiMode<'a> {
     }
     pub fn clear_bit(self) -> &'a mut DeviceConfigVal {
         self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut DeviceConfigVal {
+        self.0.0 &= !(1 << 0);
+        self.0.0 |= (1 << 0) & 0x4;
+        self.0
     }
 }

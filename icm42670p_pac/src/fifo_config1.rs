@@ -1,29 +1,53 @@
 use core::result::Result;
-use regcomms::{RegCommsError, RegComms};
+use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
 pub struct FifoConfig1<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
 impl<'a, C: RegComms<1, u8>> FifoConfig1<'a, C> {
     pub fn read(&mut self) -> Result<FifoConfig1Val, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read(0x28, &mut buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_read(&mut self.0, 0x28, &mut buf)?;
         let val = u8::from_be_bytes(buf);
         Ok(FifoConfig1Val(val))
     }
     pub async fn read_async(&mut self) -> Result<FifoConfig1Val, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read_async(0x28, &mut buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_read_async(&mut self.0, 0x28, &mut buf).await?;
         let val = u8::from_be_bytes(buf);
         Ok(FifoConfig1Val(val))
     }
     pub fn write(&mut self, val: FifoConfig1Val) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
-        self.0.comms_write(0x28, &buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_write(&mut self.0, 0x28, &buf)?;
         Ok(())
+    }
+    pub fn write_raw(&mut self, raw_val: u8) -> Result<(), RegCommsError> {
+        self.write(FifoConfig1Val(raw_val))
     }
     pub async fn write_async(&mut self, val: FifoConfig1Val) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
-        self.0.comms_write_async(0x28, &buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_write_async(&mut self.0, 0x28, &buf).await?;
         Ok(())
+    }
+    pub async fn write_raw_async(&mut self, raw_val: u8) -> Result<(), RegCommsError> {
+        self.write_async(FifoConfig1Val(raw_val)).await
+    }
+    pub fn modify<F: FnOnce(FifoConfig1Val) -> FifoConfig1Val>(&mut self, f: F) -> Result<(), RegCommsError> {
+        let orig_val = self.read()?;
+        self.write(f(orig_val))
+    }
+    pub async fn modify_async<F: FnOnce(FifoConfig1Val) -> FifoConfig1Val>(&mut self, f: F) -> Result<(), RegCommsError> {
+        let orig_val = self.read_async().await?;
+        self.write_async(f(orig_val)).await
+    }
+    pub fn reset(&mut self) -> Result<(), RegCommsError> {
+        self.write(FifoConfig1Val(0x1))
+    }
+    pub async fn reset_async(&mut self) -> Result<(), RegCommsError> {
+        self.write_async(FifoConfig1Val(0x1)).await
     }
 }
 pub struct FifoConfig1Val(pub u8);
@@ -32,17 +56,23 @@ impl FifoConfig1Val {
         self.0
     }
     pub fn zero() -> Self {
-         Self(0)
+        Self(0)
     }
-    pub fn fifo_mode<'a>(&'a mut self) -> FifoMode<'a> {
-        FifoMode(self)
+    pub fn set(&mut self, val: u8) {
+        self.0 = val;
     }
-    pub fn fifo_bypass<'a>(&'a mut self) -> FifoBypass<'a> {
-        FifoBypass(self)
+    pub fn reset_val() -> Self {
+        Self(0x1)
+    }
+    pub fn fifo_mode<'a>(&'a mut self) -> FieldFifoMode<'a> {
+        FieldFifoMode(self)
+    }
+    pub fn fifo_bypass<'a>(&'a mut self) -> FieldFifoBypass<'a> {
+        FieldFifoBypass(self)
     }
 }
-pub struct FifoMode<'a>(pub &'a mut FifoConfig1Val);
-impl<'a> FifoMode<'a> {
+pub struct FieldFifoMode<'a>(pub &'a mut FifoConfig1Val);
+impl<'a> FieldFifoMode<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 1) & 1) != 0
     }
@@ -51,7 +81,7 @@ impl<'a> FifoMode<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut FifoConfig1Val {
         self.0.0 &= !(1 << 1);
-        self.0.0 |= !(!(val as u8) << 1);
+        self.0.0 |= (val as u8) << 1;
         self.0
     }
     pub fn set_bit(self) -> &'a mut FifoConfig1Val {
@@ -60,9 +90,14 @@ impl<'a> FifoMode<'a> {
     pub fn clear_bit(self) -> &'a mut FifoConfig1Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut FifoConfig1Val {
+        self.0.0 &= !(1 << 1);
+        self.0.0 |= (1 << 1) & 0x1;
+        self.0
+    }
 }
-pub struct FifoBypass<'a>(pub &'a mut FifoConfig1Val);
-impl<'a> FifoBypass<'a> {
+pub struct FieldFifoBypass<'a>(pub &'a mut FifoConfig1Val);
+impl<'a> FieldFifoBypass<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 0) & 1) != 0
     }
@@ -71,7 +106,7 @@ impl<'a> FifoBypass<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut FifoConfig1Val {
         self.0.0 &= !(1 << 0);
-        self.0.0 |= !(!(val as u8) << 0);
+        self.0.0 |= (val as u8) << 0;
         self.0
     }
     pub fn set_bit(self) -> &'a mut FifoConfig1Val {
@@ -79,5 +114,10 @@ impl<'a> FifoBypass<'a> {
     }
     pub fn clear_bit(self) -> &'a mut FifoConfig1Val {
         self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut FifoConfig1Val {
+        self.0.0 &= !(1 << 0);
+        self.0.0 |= (1 << 0) & 0x1;
+        self.0
     }
 }

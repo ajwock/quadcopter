@@ -1,6 +1,11 @@
 name: Icm42670P
 byte_order: Big
 address_len: 1
+non_standard_access_procs:
+  - proc_name: "mreg_1"
+    struct_path: "crate::bank_access::Mreg1"
+extra_mods:
+  - "bank_access"
 registers:
   - name: rdy
     address: 0x0
@@ -569,7 +574,7 @@ registers:
     address: 0x7c
     size: 1
     readable: true
-    writable: false
+    writable: true
     reset_val: 0x00
     fields:
   - name: maddr_r
@@ -586,3 +591,538 @@ registers:
     writable: true
     reset_val: 0x00
     fields:
+
+  - name: tmst_config1
+    address: 0x00
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x02
+    access_proc: mreg_1
+    fields:
+      - name: tmst_on_sreg_en
+        field_pos: '4'
+      - name: tmst_res
+        field_pos: '3'
+      - name: tmst_delta_en
+        field_pos: '2'
+      - name: tmst_fsync_en
+        field_pos: '1'
+      - name: tmst_en
+        field_pos: '0'
+  - name: fifo_config5
+    address: 0x01
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x20
+    access_proc: mreg_1
+    fields:
+      - name: fifo_wm_gt_th
+        field_pos: '5'
+      - name: fifo_resume_partial_rd
+        field_pos: '4'
+      - name: fifo_hires_en
+        field_pos: '3'
+      - name: fifo_tmst_fsync_en
+        field_pos: '2'
+      - name: fifo_gyro_en
+        field_pos: '1'
+      - name: fifo_accel_en
+        field_pos: '0'
+  - name: fifo_config6
+    address: 0x02
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: fifo_empty_indicator_dis
+        field_pos: '4'
+      - name: rcosc_req_on_fifo_ths_dis
+        field_pos: '0'
+  - name: fsync_config
+    address: 0x03
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: fsync_ui_sel
+        field_pos: '[6:4]'
+      - name: fsync_ui_flag_clear_sel
+        field_pos: '1'
+      - name: fsync_polarity
+        field_pos: '0'
+  - name: int_config0
+    address: 0x04
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: ui_drdy_int_clear
+        field_pos: '[5:4]'
+      - name: fifo_ths_int_clear
+        field_pos: '[3:2]'
+      - name: fifo_full_int_clear
+        field_pos: '[1:0]'
+  - name: int_config1
+    address: 0x05
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x10
+    access_proc: mreg_1
+    fields:
+      - name: int_tpulse_duration
+        field_pos: '6'
+      - name: int_async_reset
+        field_pos: '4'
+  - name: sensor_config3
+    address: 0x06
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: apex_disable
+        field_pos: '6'
+  - name: st_config
+    address: 0x13
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: st_number_sample
+        field_pos: '6'
+      - name: accel_st_lim
+        field_pos: '[5:3]'
+      - name: gyro_st_lim
+        field_pos: '[2:0]'
+  - name: selftest
+    address: 0x14
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: gyro_st_en
+        field_pos: '7'
+      - name: accel_st_en
+        field_pos: '6'
+  - name: intf_config6
+    address: 0x23
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x7c
+    access_proc: mreg_1
+    fields:
+      - name: i3c_timeout_en
+        field_pos: '4'
+      - name: i3c_ibi_byte_en
+        field_pos: '3'
+      - name: i3c_ibi_en
+        field_pos: '2'
+  - name: intf_config10
+    address: 0x25
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: asynctime0_dis
+        field_pos: '7'
+  - name: intf_config7
+    address: 0x28
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x28
+    access_proc: mreg_1
+    fields:
+      - name: i3c_ddr_wr_mode
+        field_pos: '3'
+  - name: otp_config
+    size: 1
+    address: 0x2b
+    readable: true
+    writable: true
+    reset_val: 0x06
+    access_proc: mreg_1
+    fields:
+      - name: otp_copy_mode
+        field_pos: '[3:2]'
+  - name: int_source6
+    address: 0x2f
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: ff_int1_en
+        field_pos: '7'
+      - name: lowg_int1_en
+        field_pos: '6'
+      - name: step_det_int1_en
+        field_pos: '5'
+      - name: step_cnt_ofl_int1_en
+        field_pos: '4'
+      - name: tilt_det_int1_en
+        field_pos: '3'
+  - name: int_source7
+    address: 0x2f
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: ff_int2_en
+        field_pos: '7'
+      - name: lowg_int2_en
+        field_pos: '6'
+      - name: step_det_int2_en
+        field_pos: '5'
+      - name: step_cnt_ofl_int2_en
+        field_pos: '4'
+      - name: tilt_det_int2_en
+        field_pos: '3'
+  - name: int_source8
+    address: 0x31
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: fsync_ibi_en
+        field_pos: '5'
+      - name: pll_rdy_ibi_en
+        field_pos: '4'
+      - name: ui_drdy_ibi_en
+        field_pos: '3'
+      - name: fifo_ths_ibi_en
+        field_pos: '2'
+      - name: fifo_full_ibi_en
+        field_pos: '1'
+      - name: agc_rdy_ibi_en
+        field_pos: '0'
+  - name: int_source9
+    address: 0x32
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: i3c_protocol_error_ibi_en
+        field_pos: '7'
+      - name: ff_ibi_en
+        field_pos: '6'
+      - name: lowg_ibi_en
+        field_pos: '5'
+      - name: smd_ibi_en
+        field_pos: '4'
+      - name: wom_z_ibi_en
+        field_pos: '3'
+      - name: wom_y_ibi_en
+        field_pos: '2'
+      - name: wom_x_ibi_en
+        field_pos: '1'
+      - name: st_done_ibi_en
+        field_pos: '0'
+  - name: int_source10
+    address: 0x33
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: step_det_ibi_en
+        field_pos: '5'
+      - name: step_cnt_ofl_ibi_en
+        field_pos: '4'
+      - name: tilt_det_ibi_en
+        field_pos: '3'
+  - name: apex_config2
+    address: 0x44
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0xa2
+    access_proc: mreg_1
+    fields:
+      - name: low_energy_amp_th_sel
+        field_pos: '[7:4]'
+      - name: dmp_power_save_time_sel
+        field_pos: '[3:0]'
+  - name: apex_config3
+    address: 0x45
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x85
+    access_proc: mreg_1
+    fields:
+      - name: ped_amp_th_sel
+        field_pos: '[7:4]'
+      - name: ped_step_cnt_th_sel
+        field_pos: '[3:0]'
+  - name: apex_config4
+    address: 0x46
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x51
+    access_proc: mreg_1
+    fields:
+      - name: ped_step_det_th_sel
+        field_pos: '[7:5]'
+      - name: ped_sb_timer_th_sel
+        field_pos: '[4:2]'
+      - name: ped_hi_en_th_sel
+        field_pos: '[1:0]'
+  - name: apex_config5
+    address: 0x47
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x80
+    access_proc: mreg_1
+    fields:
+      - name: tilt_wait_time_sel
+        field_pos: '[7:6]'
+      - name: lowg_peak_th_hyst_sel
+        field_pos: '[5:3]'
+      - name: highg_peak_th_hyst_sel
+        field_pos: '[2:0]'
+  - name: apex_config9
+    address: 0x48
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: ff_debounce_duration_sel
+        field_pos: '[7:4]'
+      - name: smd_sensitivity_sel
+        field_pos: '[3:1]'
+      - name: sensitivity_mode
+        field_pos: '0'
+  - name: apex_config10
+    address: 0x49
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: lowg_peak_th_sel
+        field_pos: '[7:3]'
+      - name: lowg_time_th_sel
+        field_pos: '[2:0]'
+  - name: apex_config11
+    address: 0x4a
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: highg_peak_th_sel
+        field_pos: '[7:3]'
+      - name: highg_time_th_sel
+        field_pos: '[2:0]'
+  - name: accel_wom_x_thr
+    address: 0x48
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+  - name: accel_wom_y_thr
+    address: 0x4c
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+  - name: accel_wom_z_thr
+    address: 0x4d
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+  - name: offset_user0
+    address: 0x4e
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: gyro_x_offuser_7_0
+        field_pos: '[7:0]'
+  - name: offset_user1
+    address: 0x4f
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: gyro_y_offuser_11_8
+        field_pos: '[7:4]'
+      - name: gyro_x_offuser_11_8
+        field_pos: '[3:0]'
+  - name: offset_user2
+    address: 0x50
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: gyro_y_offuser_7_0
+        field_pos: '[7:0]'
+  - name: offset_user3
+    address: 0x51
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: gyro_z_offuser_7_0
+        field_pos: '[7:0]'
+  - name: offset_user4
+    address: 0x52
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: accel_x_offuser_11_8
+        field_pos: '[7:4]'
+      - name: gyro_z_offuser_11_8
+        field_pos: '[3:0]'
+  - name: offset_user5
+    address: 0x53
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: accel_x_offuser_7_0
+        field_pos: '[7:0]'
+  - name: offset_user6
+    address: 0x54
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: accel_y_offuser_7_0
+        field_pos: '[7:0]'
+  - name: offset_user7
+    address: 0x55
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: accel_z_offuser_11_8
+        field_pos: '[7:4]'
+      - name: accel_y_offuser_11_8
+        field_pos: '[3:0]'
+  - name: offset_user8
+    address: 0x56
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: accel_z_offuser_7_0
+        field_pos: '[7:0]'
+  - name: st_status1
+    address: 0x63
+    size: 1
+    readable: true
+    writable: false 
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: accel_st_pass
+        field_pos: '5'
+      - name: accel_st_done
+        field_pos: '4'
+      - name: az_st_pass
+        field_pos: '3'
+      - name: ay_st_pass
+        field_pos: '2'
+      - name: ax_st_pass
+        field_pos: '1'
+  - name: st_status2
+    address: 0x64
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: st_incomplete
+        field_pos: '6'
+      - name: gyro_st_pass
+        field_pos: '5'
+      - name: gyro_st_done
+        field_pos: '4'
+      - name: gz_st_pass
+        field_pos: '3'
+      - name: gy_st_pass
+        field_pos: '2'
+      - name: gx_st_pass
+        field_pos: '1'
+  - name: fdr_config
+    address: 0x66
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: fdr_sel
+        field_pos: '[3:0]'
+  - name: apex_config12
+    address: 0x67
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    access_proc: mreg_1
+    fields:
+      - name: ff_max_duration_sel
+        field_pos: '[7:4]'
+      - name: ff_min_duration_sel
+        field_pos: '[3:0]'

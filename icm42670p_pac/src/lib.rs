@@ -1,5 +1,6 @@
 #![no_std]
 use core::result::Result;
+use core::default::Default;
 mod rdy;
 mod device_config;
 mod signal_path_reset;
@@ -54,23 +55,80 @@ mod m_w;
 mod blk_sel_r;
 mod maddr_r;
 mod m_r;
-use regcomms::{RegComms, RegCommsError};
-pub enum AccessProc {
-    Standard,
+mod tmst_config1;
+mod fifo_config5;
+mod fifo_config6;
+mod fsync_config;
+mod int_config0;
+mod int_config1;
+mod sensor_config3;
+mod st_config;
+mod selftest;
+mod intf_config6;
+mod intf_config10;
+mod intf_config7;
+mod otp_config;
+mod int_source6;
+mod int_source7;
+mod int_source8;
+mod int_source9;
+mod int_source10;
+mod apex_config2;
+mod apex_config3;
+mod apex_config4;
+mod apex_config5;
+mod apex_config9;
+mod apex_config10;
+mod apex_config11;
+mod accel_wom_x_thr;
+mod accel_wom_y_thr;
+mod accel_wom_z_thr;
+mod offset_user0;
+mod offset_user1;
+mod offset_user2;
+mod offset_user3;
+mod offset_user4;
+mod offset_user5;
+mod offset_user6;
+mod offset_user7;
+mod offset_user8;
+mod st_status1;
+mod st_status2;
+mod fdr_config;
+mod apex_config12;
+mod bank_access;
+use regcomms::{RegComms, RegCommsError, RegCommsAccessProc};
+use spin::once::Once;
+#[derive(Default)]
+pub struct StandardAccessProc;
+impl<C: RegComms<1, u8>> RegCommsAccessProc<Icm42670P<C>, 1, u8> for StandardAccessProc {
+    fn proc_read(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &mut [u8]) -> Result<(), RegCommsError> {
+        peripheral.comms.comms_read(reg_address, buf)
+    }
+    async fn proc_read_async(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &mut [u8]) -> Result<(), RegCommsError> {
+        peripheral.comms.comms_read_async(reg_address, buf).await
+    }
+    fn proc_write(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &[u8]) -> Result<(), RegCommsError> {
+        peripheral.comms.comms_write(reg_address, buf)
+    }
+    async fn proc_write_async(&self, peripheral: &mut Icm42670P<C>, reg_address: u8, buf: &[u8]) -> Result<(), RegCommsError> {
+        peripheral.comms.comms_write_async(reg_address, buf).await
+    }
 }
-pub struct Icm42670P<C: RegComms<1, u8>>(pub C);
+static MREG_1: Once<crate::bank_access::Mreg1> = Once::new();
+static STANDARD: Once<StandardAccessProc> = Once::new();
+pub struct Icm42670P<C: RegComms<1, u8>> {
+    comms: C,
+    mreg_1: &'static crate::bank_access::Mreg1,
+    standard: &'static StandardAccessProc,
+}
 impl<C: RegComms<1, u8>> Icm42670P<C> {
-    pub fn comms_read(&mut self, reg_address: u8, buf: &mut [u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {
-        self.0.comms_read(reg_address, buf)
-    }
-    pub fn comms_write(&mut self, reg_address: u8, buf: &[u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {
-        self.0.comms_write(reg_address, buf)
-    }
-    pub async fn comms_read_async(&mut self, reg_address: u8, buf: &mut [u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {
-        self.0.comms_read_async(reg_address, buf).await
-    }
-    pub async fn comms_write_async(&mut self, reg_address: u8, buf: &[u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {
-        self.0.comms_write_async(reg_address, buf).await
+    pub fn new(comms: C) -> Self {
+        Self {
+            comms,
+            mreg_1: MREG_1.call_once(|| Default::default()),
+            standard: STANDARD.call_once(|| Default::default()),
+        }
     }
     pub fn rdy<'a>(&'a mut self) -> rdy::Rdy<'a, C> {
         rdy::Rdy(self)
@@ -233,5 +291,128 @@ impl<C: RegComms<1, u8>> Icm42670P<C> {
     }
     pub fn m_r<'a>(&'a mut self) -> m_r::MR<'a, C> {
         m_r::MR(self)
+    }
+    pub fn tmst_config1<'a>(&'a mut self) -> tmst_config1::TmstConfig1<'a, C> {
+        tmst_config1::TmstConfig1(self)
+    }
+    pub fn fifo_config5<'a>(&'a mut self) -> fifo_config5::FifoConfig5<'a, C> {
+        fifo_config5::FifoConfig5(self)
+    }
+    pub fn fifo_config6<'a>(&'a mut self) -> fifo_config6::FifoConfig6<'a, C> {
+        fifo_config6::FifoConfig6(self)
+    }
+    pub fn fsync_config<'a>(&'a mut self) -> fsync_config::FsyncConfig<'a, C> {
+        fsync_config::FsyncConfig(self)
+    }
+    pub fn int_config0<'a>(&'a mut self) -> int_config0::IntConfig0<'a, C> {
+        int_config0::IntConfig0(self)
+    }
+    pub fn int_config1<'a>(&'a mut self) -> int_config1::IntConfig1<'a, C> {
+        int_config1::IntConfig1(self)
+    }
+    pub fn sensor_config3<'a>(&'a mut self) -> sensor_config3::SensorConfig3<'a, C> {
+        sensor_config3::SensorConfig3(self)
+    }
+    pub fn st_config<'a>(&'a mut self) -> st_config::StConfig<'a, C> {
+        st_config::StConfig(self)
+    }
+    pub fn selftest<'a>(&'a mut self) -> selftest::Selftest<'a, C> {
+        selftest::Selftest(self)
+    }
+    pub fn intf_config6<'a>(&'a mut self) -> intf_config6::IntfConfig6<'a, C> {
+        intf_config6::IntfConfig6(self)
+    }
+    pub fn intf_config10<'a>(&'a mut self) -> intf_config10::IntfConfig10<'a, C> {
+        intf_config10::IntfConfig10(self)
+    }
+    pub fn intf_config7<'a>(&'a mut self) -> intf_config7::IntfConfig7<'a, C> {
+        intf_config7::IntfConfig7(self)
+    }
+    pub fn otp_config<'a>(&'a mut self) -> otp_config::OtpConfig<'a, C> {
+        otp_config::OtpConfig(self)
+    }
+    pub fn int_source6<'a>(&'a mut self) -> int_source6::IntSource6<'a, C> {
+        int_source6::IntSource6(self)
+    }
+    pub fn int_source7<'a>(&'a mut self) -> int_source7::IntSource7<'a, C> {
+        int_source7::IntSource7(self)
+    }
+    pub fn int_source8<'a>(&'a mut self) -> int_source8::IntSource8<'a, C> {
+        int_source8::IntSource8(self)
+    }
+    pub fn int_source9<'a>(&'a mut self) -> int_source9::IntSource9<'a, C> {
+        int_source9::IntSource9(self)
+    }
+    pub fn int_source10<'a>(&'a mut self) -> int_source10::IntSource10<'a, C> {
+        int_source10::IntSource10(self)
+    }
+    pub fn apex_config2<'a>(&'a mut self) -> apex_config2::ApexConfig2<'a, C> {
+        apex_config2::ApexConfig2(self)
+    }
+    pub fn apex_config3<'a>(&'a mut self) -> apex_config3::ApexConfig3<'a, C> {
+        apex_config3::ApexConfig3(self)
+    }
+    pub fn apex_config4<'a>(&'a mut self) -> apex_config4::ApexConfig4<'a, C> {
+        apex_config4::ApexConfig4(self)
+    }
+    pub fn apex_config5<'a>(&'a mut self) -> apex_config5::ApexConfig5<'a, C> {
+        apex_config5::ApexConfig5(self)
+    }
+    pub fn apex_config9<'a>(&'a mut self) -> apex_config9::ApexConfig9<'a, C> {
+        apex_config9::ApexConfig9(self)
+    }
+    pub fn apex_config10<'a>(&'a mut self) -> apex_config10::ApexConfig10<'a, C> {
+        apex_config10::ApexConfig10(self)
+    }
+    pub fn apex_config11<'a>(&'a mut self) -> apex_config11::ApexConfig11<'a, C> {
+        apex_config11::ApexConfig11(self)
+    }
+    pub fn accel_wom_x_thr<'a>(&'a mut self) -> accel_wom_x_thr::AccelWomXThr<'a, C> {
+        accel_wom_x_thr::AccelWomXThr(self)
+    }
+    pub fn accel_wom_y_thr<'a>(&'a mut self) -> accel_wom_y_thr::AccelWomYThr<'a, C> {
+        accel_wom_y_thr::AccelWomYThr(self)
+    }
+    pub fn accel_wom_z_thr<'a>(&'a mut self) -> accel_wom_z_thr::AccelWomZThr<'a, C> {
+        accel_wom_z_thr::AccelWomZThr(self)
+    }
+    pub fn offset_user0<'a>(&'a mut self) -> offset_user0::OffsetUser0<'a, C> {
+        offset_user0::OffsetUser0(self)
+    }
+    pub fn offset_user1<'a>(&'a mut self) -> offset_user1::OffsetUser1<'a, C> {
+        offset_user1::OffsetUser1(self)
+    }
+    pub fn offset_user2<'a>(&'a mut self) -> offset_user2::OffsetUser2<'a, C> {
+        offset_user2::OffsetUser2(self)
+    }
+    pub fn offset_user3<'a>(&'a mut self) -> offset_user3::OffsetUser3<'a, C> {
+        offset_user3::OffsetUser3(self)
+    }
+    pub fn offset_user4<'a>(&'a mut self) -> offset_user4::OffsetUser4<'a, C> {
+        offset_user4::OffsetUser4(self)
+    }
+    pub fn offset_user5<'a>(&'a mut self) -> offset_user5::OffsetUser5<'a, C> {
+        offset_user5::OffsetUser5(self)
+    }
+    pub fn offset_user6<'a>(&'a mut self) -> offset_user6::OffsetUser6<'a, C> {
+        offset_user6::OffsetUser6(self)
+    }
+    pub fn offset_user7<'a>(&'a mut self) -> offset_user7::OffsetUser7<'a, C> {
+        offset_user7::OffsetUser7(self)
+    }
+    pub fn offset_user8<'a>(&'a mut self) -> offset_user8::OffsetUser8<'a, C> {
+        offset_user8::OffsetUser8(self)
+    }
+    pub fn st_status1<'a>(&'a mut self) -> st_status1::StStatus1<'a, C> {
+        st_status1::StStatus1(self)
+    }
+    pub fn st_status2<'a>(&'a mut self) -> st_status2::StStatus2<'a, C> {
+        st_status2::StStatus2(self)
+    }
+    pub fn fdr_config<'a>(&'a mut self) -> fdr_config::FdrConfig<'a, C> {
+        fdr_config::FdrConfig(self)
+    }
+    pub fn apex_config12<'a>(&'a mut self) -> apex_config12::ApexConfig12<'a, C> {
+        apex_config12::ApexConfig12(self)
     }
 }

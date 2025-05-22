@@ -80,6 +80,7 @@ use esp_wifi::{
 };
 use motor_drive::MotorDrive;
 use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU8, AtomicI32};
+use regcomms::i2c::I2cCommsAsync;
 
 use imu_common::{Imu, ImuCalibrator};
 
@@ -258,7 +259,10 @@ async fn main(spawner: Spawner) {
         }),
         fifo_config: Some(Default::default()),
     };
-    let mut imu = Icm42670::new(i2c); 
+    let comms = i2c;
+    let i2c_comms = I2cCommsAsync::new(comms)
+        .with_address(0b1101000);
+    let mut imu = Icm42670::new(i2c_comms); 
     let mut ticker = Ticker::every(Duration::from_millis(10));
     imu.configure2(config).await.unwrap();
     imu.full_enable().await;

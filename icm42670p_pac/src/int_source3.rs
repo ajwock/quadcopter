@@ -1,29 +1,53 @@
 use core::result::Result;
-use regcomms::{RegCommsError, RegComms};
+use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
 pub struct IntSource3<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
 impl<'a, C: RegComms<1, u8>> IntSource3<'a, C> {
     pub fn read(&mut self) -> Result<IntSource3Val, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read(0x2d, &mut buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_read(&mut self.0, 0x2d, &mut buf)?;
         let val = u8::from_be_bytes(buf);
         Ok(IntSource3Val(val))
     }
     pub async fn read_async(&mut self) -> Result<IntSource3Val, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read_async(0x2d, &mut buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_read_async(&mut self.0, 0x2d, &mut buf).await?;
         let val = u8::from_be_bytes(buf);
         Ok(IntSource3Val(val))
     }
     pub fn write(&mut self, val: IntSource3Val) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
-        self.0.comms_write(0x2d, &buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_write(&mut self.0, 0x2d, &buf)?;
         Ok(())
+    }
+    pub fn write_raw(&mut self, raw_val: u8) -> Result<(), RegCommsError> {
+        self.write(IntSource3Val(raw_val))
     }
     pub async fn write_async(&mut self, val: IntSource3Val) -> Result<(), RegCommsError> {
         let buf = val.0.to_be_bytes();
-        self.0.comms_write_async(0x2d, &buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_write_async(&mut self.0, 0x2d, &buf).await?;
         Ok(())
+    }
+    pub async fn write_raw_async(&mut self, raw_val: u8) -> Result<(), RegCommsError> {
+        self.write_async(IntSource3Val(raw_val)).await
+    }
+    pub fn modify<F: FnOnce(IntSource3Val) -> IntSource3Val>(&mut self, f: F) -> Result<(), RegCommsError> {
+        let orig_val = self.read()?;
+        self.write(f(orig_val))
+    }
+    pub async fn modify_async<F: FnOnce(IntSource3Val) -> IntSource3Val>(&mut self, f: F) -> Result<(), RegCommsError> {
+        let orig_val = self.read_async().await?;
+        self.write_async(f(orig_val)).await
+    }
+    pub fn reset(&mut self) -> Result<(), RegCommsError> {
+        self.write(IntSource3Val(0x0))
+    }
+    pub async fn reset_async(&mut self) -> Result<(), RegCommsError> {
+        self.write_async(IntSource3Val(0x0)).await
     }
 }
 pub struct IntSource3Val(pub u8);
@@ -32,35 +56,41 @@ impl IntSource3Val {
         self.0
     }
     pub fn zero() -> Self {
-         Self(0)
+        Self(0)
     }
-    pub fn st_int2_en<'a>(&'a mut self) -> StInt2En<'a> {
-        StInt2En(self)
+    pub fn set(&mut self, val: u8) {
+        self.0 = val;
     }
-    pub fn fsync_int2_en<'a>(&'a mut self) -> FsyncInt2En<'a> {
-        FsyncInt2En(self)
+    pub fn reset_val() -> Self {
+        Self(0x0)
     }
-    pub fn pll_rdy_int2_en<'a>(&'a mut self) -> PllRdyInt2En<'a> {
-        PllRdyInt2En(self)
+    pub fn st_int2_en<'a>(&'a mut self) -> FieldStInt2En<'a> {
+        FieldStInt2En(self)
     }
-    pub fn reset_done_int2_en<'a>(&'a mut self) -> ResetDoneInt2En<'a> {
-        ResetDoneInt2En(self)
+    pub fn fsync_int2_en<'a>(&'a mut self) -> FieldFsyncInt2En<'a> {
+        FieldFsyncInt2En(self)
     }
-    pub fn drdy_int2_en<'a>(&'a mut self) -> DrdyInt2En<'a> {
-        DrdyInt2En(self)
+    pub fn pll_rdy_int2_en<'a>(&'a mut self) -> FieldPllRdyInt2En<'a> {
+        FieldPllRdyInt2En(self)
     }
-    pub fn fifo_ths_int2_en<'a>(&'a mut self) -> FifoThsInt2En<'a> {
-        FifoThsInt2En(self)
+    pub fn reset_done_int2_en<'a>(&'a mut self) -> FieldResetDoneInt2En<'a> {
+        FieldResetDoneInt2En(self)
     }
-    pub fn fifo_full_int2_en<'a>(&'a mut self) -> FifoFullInt2En<'a> {
-        FifoFullInt2En(self)
+    pub fn drdy_int2_en<'a>(&'a mut self) -> FieldDrdyInt2En<'a> {
+        FieldDrdyInt2En(self)
     }
-    pub fn agc_rdy_int2_en<'a>(&'a mut self) -> AgcRdyInt2En<'a> {
-        AgcRdyInt2En(self)
+    pub fn fifo_ths_int2_en<'a>(&'a mut self) -> FieldFifoThsInt2En<'a> {
+        FieldFifoThsInt2En(self)
+    }
+    pub fn fifo_full_int2_en<'a>(&'a mut self) -> FieldFifoFullInt2En<'a> {
+        FieldFifoFullInt2En(self)
+    }
+    pub fn agc_rdy_int2_en<'a>(&'a mut self) -> FieldAgcRdyInt2En<'a> {
+        FieldAgcRdyInt2En(self)
     }
 }
-pub struct StInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> StInt2En<'a> {
+pub struct FieldStInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldStInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 7) & 1) != 0
     }
@@ -69,7 +99,7 @@ impl<'a> StInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 7);
-        self.0.0 |= !(!(val as u8) << 7);
+        self.0.0 |= (val as u8) << 7;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -78,9 +108,14 @@ impl<'a> StInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 7);
+        self.0.0 |= (1 << 7) & 0x0;
+        self.0
+    }
 }
-pub struct FsyncInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> FsyncInt2En<'a> {
+pub struct FieldFsyncInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldFsyncInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 6) & 1) != 0
     }
@@ -89,7 +124,7 @@ impl<'a> FsyncInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 6);
-        self.0.0 |= !(!(val as u8) << 6);
+        self.0.0 |= (val as u8) << 6;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -98,9 +133,14 @@ impl<'a> FsyncInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 6);
+        self.0.0 |= (1 << 6) & 0x0;
+        self.0
+    }
 }
-pub struct PllRdyInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> PllRdyInt2En<'a> {
+pub struct FieldPllRdyInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldPllRdyInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 5) & 1) != 0
     }
@@ -109,7 +149,7 @@ impl<'a> PllRdyInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 5);
-        self.0.0 |= !(!(val as u8) << 5);
+        self.0.0 |= (val as u8) << 5;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -118,9 +158,14 @@ impl<'a> PllRdyInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 5);
+        self.0.0 |= (1 << 5) & 0x0;
+        self.0
+    }
 }
-pub struct ResetDoneInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> ResetDoneInt2En<'a> {
+pub struct FieldResetDoneInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldResetDoneInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 4) & 1) != 0
     }
@@ -129,7 +174,7 @@ impl<'a> ResetDoneInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 4);
-        self.0.0 |= !(!(val as u8) << 4);
+        self.0.0 |= (val as u8) << 4;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -138,9 +183,14 @@ impl<'a> ResetDoneInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 4);
+        self.0.0 |= (1 << 4) & 0x0;
+        self.0
+    }
 }
-pub struct DrdyInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> DrdyInt2En<'a> {
+pub struct FieldDrdyInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldDrdyInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 3) & 1) != 0
     }
@@ -149,7 +199,7 @@ impl<'a> DrdyInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 3);
-        self.0.0 |= !(!(val as u8) << 3);
+        self.0.0 |= (val as u8) << 3;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -158,9 +208,14 @@ impl<'a> DrdyInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 3);
+        self.0.0 |= (1 << 3) & 0x0;
+        self.0
+    }
 }
-pub struct FifoThsInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> FifoThsInt2En<'a> {
+pub struct FieldFifoThsInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldFifoThsInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 2) & 1) != 0
     }
@@ -169,7 +224,7 @@ impl<'a> FifoThsInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 2);
-        self.0.0 |= !(!(val as u8) << 2);
+        self.0.0 |= (val as u8) << 2;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -178,9 +233,14 @@ impl<'a> FifoThsInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 2);
+        self.0.0 |= (1 << 2) & 0x0;
+        self.0
+    }
 }
-pub struct FifoFullInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> FifoFullInt2En<'a> {
+pub struct FieldFifoFullInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldFifoFullInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 1) & 1) != 0
     }
@@ -189,7 +249,7 @@ impl<'a> FifoFullInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 1);
-        self.0.0 |= !(!(val as u8) << 1);
+        self.0.0 |= (val as u8) << 1;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -198,9 +258,14 @@ impl<'a> FifoFullInt2En<'a> {
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
     }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 1);
+        self.0.0 |= (1 << 1) & 0x0;
+        self.0
+    }
 }
-pub struct AgcRdyInt2En<'a>(pub &'a mut IntSource3Val);
-impl<'a> AgcRdyInt2En<'a> {
+pub struct FieldAgcRdyInt2En<'a>(pub &'a mut IntSource3Val);
+impl<'a> FieldAgcRdyInt2En<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 0) & 1) != 0
     }
@@ -209,7 +274,7 @@ impl<'a> AgcRdyInt2En<'a> {
     }
     pub fn assign(self, val: bool) -> &'a mut IntSource3Val {
         self.0.0 &= !(1 << 0);
-        self.0.0 |= !(!(val as u8) << 0);
+        self.0.0 |= (val as u8) << 0;
         self.0
     }
     pub fn set_bit(self) -> &'a mut IntSource3Val {
@@ -217,5 +282,10 @@ impl<'a> AgcRdyInt2En<'a> {
     }
     pub fn clear_bit(self) -> &'a mut IntSource3Val {
         self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut IntSource3Val {
+        self.0.0 &= !(1 << 0);
+        self.0.0 |= (1 << 0) & 0x0;
+        self.0
     }
 }

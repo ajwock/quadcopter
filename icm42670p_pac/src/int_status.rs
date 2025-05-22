@@ -1,17 +1,19 @@
 use core::result::Result;
-use regcomms::{RegCommsError, RegComms};
+use regcomms::{RegCommsError, RegComms, RegCommsAccessProc};
 use crate::Icm42670P;
 pub struct IntStatus<'a, C: RegComms<1, u8>>(pub &'a mut Icm42670P<C>);
 impl<'a, C: RegComms<1, u8>> IntStatus<'a, C> {
     pub fn read(&mut self) -> Result<IntStatusVal, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read(0x3a, &mut buf, crate::AccessProc::Standard)?;
+        let proc = self.0.standard;
+        proc.proc_read(&mut self.0, 0x3a, &mut buf)?;
         let val = u8::from_be_bytes(buf);
         Ok(IntStatusVal(val))
     }
     pub async fn read_async(&mut self) -> Result<IntStatusVal, RegCommsError> {
         let mut buf = [0u8; 1];
-        self.0.comms_read_async(0x3a, &mut buf, crate::AccessProc::Standard).await?;
+        let proc = self.0.standard;
+        proc.proc_read_async(&mut self.0, 0x3a, &mut buf).await?;
         let val = u8::from_be_bytes(buf);
         Ok(IntStatusVal(val))
     }
@@ -21,30 +23,33 @@ impl IntStatusVal {
     pub fn get(&self) -> u8 {
         self.0
     }
-    pub fn st_int<'a>(&'a mut self) -> StInt<'a> {
-        StInt(self)
+    pub fn reset_val() -> Self {
+        Self(0x10)
     }
-    pub fn fsync_int<'a>(&'a mut self) -> FsyncInt<'a> {
-        FsyncInt(self)
+    pub fn st_int<'a>(&'a mut self) -> FieldStInt<'a> {
+        FieldStInt(self)
     }
-    pub fn pll_rdy_int<'a>(&'a mut self) -> PllRdyInt<'a> {
-        PllRdyInt(self)
+    pub fn fsync_int<'a>(&'a mut self) -> FieldFsyncInt<'a> {
+        FieldFsyncInt(self)
     }
-    pub fn reset_done_int<'a>(&'a mut self) -> ResetDoneInt<'a> {
-        ResetDoneInt(self)
+    pub fn pll_rdy_int<'a>(&'a mut self) -> FieldPllRdyInt<'a> {
+        FieldPllRdyInt(self)
     }
-    pub fn fifo_ths_int<'a>(&'a mut self) -> FifoThsInt<'a> {
-        FifoThsInt(self)
+    pub fn reset_done_int<'a>(&'a mut self) -> FieldResetDoneInt<'a> {
+        FieldResetDoneInt(self)
     }
-    pub fn fifo_full_int<'a>(&'a mut self) -> FifoFullInt<'a> {
-        FifoFullInt(self)
+    pub fn fifo_ths_int<'a>(&'a mut self) -> FieldFifoThsInt<'a> {
+        FieldFifoThsInt(self)
     }
-    pub fn agc_rdy_int<'a>(&'a mut self) -> AgcRdyInt<'a> {
-        AgcRdyInt(self)
+    pub fn fifo_full_int<'a>(&'a mut self) -> FieldFifoFullInt<'a> {
+        FieldFifoFullInt(self)
+    }
+    pub fn agc_rdy_int<'a>(&'a mut self) -> FieldAgcRdyInt<'a> {
+        FieldAgcRdyInt(self)
     }
 }
-pub struct StInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> StInt<'a> {
+pub struct FieldStInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldStInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 7) & 1) != 0
     }
@@ -52,8 +57,8 @@ impl<'a> StInt<'a> {
         self.bit()
     }
 }
-pub struct FsyncInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> FsyncInt<'a> {
+pub struct FieldFsyncInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldFsyncInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 6) & 1) != 0
     }
@@ -61,8 +66,8 @@ impl<'a> FsyncInt<'a> {
         self.bit()
     }
 }
-pub struct PllRdyInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> PllRdyInt<'a> {
+pub struct FieldPllRdyInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldPllRdyInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 5) & 1) != 0
     }
@@ -70,8 +75,8 @@ impl<'a> PllRdyInt<'a> {
         self.bit()
     }
 }
-pub struct ResetDoneInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> ResetDoneInt<'a> {
+pub struct FieldResetDoneInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldResetDoneInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 4) & 1) != 0
     }
@@ -79,8 +84,8 @@ impl<'a> ResetDoneInt<'a> {
         self.bit()
     }
 }
-pub struct FifoThsInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> FifoThsInt<'a> {
+pub struct FieldFifoThsInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldFifoThsInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 2) & 1) != 0
     }
@@ -88,8 +93,8 @@ impl<'a> FifoThsInt<'a> {
         self.bit()
     }
 }
-pub struct FifoFullInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> FifoFullInt<'a> {
+pub struct FieldFifoFullInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldFifoFullInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 1) & 1) != 0
     }
@@ -97,8 +102,8 @@ impl<'a> FifoFullInt<'a> {
         self.bit()
     }
 }
-pub struct AgcRdyInt<'a>(pub &'a mut IntStatusVal);
-impl<'a> AgcRdyInt<'a> {
+pub struct FieldAgcRdyInt<'a>(pub &'a mut IntStatusVal);
+impl<'a> FieldAgcRdyInt<'a> {
     pub fn bit(&self) -> bool {
         ((self.0.0 >> 0) & 1) != 0
     }
