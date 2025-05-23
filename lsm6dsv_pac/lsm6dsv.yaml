@@ -1,0 +1,957 @@
+name: Lsm6Dsv
+byte_order: Little
+address_len: 1
+
+registers:
+  - name: func_cfg_access
+    address: 0x01
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: emb_func_reg_access
+        field_pos: '7'
+      - name: shub_reg_access
+        field_pos: '6'
+      - name: fsm_wr_ctrl_en
+        field_pos: '3'
+      - name: sw_por
+        field_pos: '2'
+  - name: pin_ctrl
+    address: 0x02
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x23
+    fields:
+      - name: sdo_pu_en
+        field_pos: '6'
+      - name: ibhr_por_en
+        field_pos: '5'
+      - name: io_pad_strength
+        field_pos: '[1:0]'
+  - name: if_cfg
+    address: 0x03
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: sda_pu_en
+        field_pos: '7'
+      - name: shub_pu_en
+        field_pos: '6'
+      - name: asf_ctrl
+        field_pos: '5'
+      - name: h_lactive
+        field_pos: '4'
+      - name: pp_od
+        field_pos: '3'
+      - name: sim
+        field_pos: '2'
+      - name: i2c_i3c_disable
+        field_pos: '0'
+  - name: odr_trig_cfg
+    address: 0x06
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: fifo_ctrl1
+    address: 0x07
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: fifo_ctrl2
+    size: 1
+    address: 0x08
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: stop_on_wtm
+        field_pos: '7'
+      - name: fifo_compr_rt_en
+        field_pos: '6'
+      - name: odr_chg_en
+        field_pos: '5'
+      - name: uncompr_rate
+        field_pos: '[2:1]'
+  - name: fifo_ctrl3
+    address: 0x09
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: bdr_gy
+        field_pos: '[7:4]'
+      - name: bdr_xl
+        field_pos: '[3:0]'
+  - name: fifo_ctrl4
+    size: 1
+    address: 0x0a
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: dec_ts_batch
+        field_pos: '[7:6]'
+      - name: odr_t_batch
+        field_pos: '[5:4]'
+      - name: fifo_mode
+        field_pos: '[2:0]'
+  - name: counter_bdr_reg1
+    address: 0x0b
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: trig_counter_bdr
+        field_pos: '[6:5]'
+      - name: xl_hg_batch_en
+        field_pos: '4'
+      - name: cnt_bdr_th_9_8
+        field_pos: '[1:0]'
+  - name: counter_bdr_reg2
+    size: 1
+    address: 0x0c
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: cnt_dr_th_7_0
+        field_pos: '[7:0]'
+  - name: int1_ctrl
+    size: 1
+    address: 0x0d
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int1_cnt_bdr
+        field_pos: '6'
+      - name: int1_fifo_full
+        field_pos: '5'
+      - name: int1_fifo_ovr
+        field_pos: '4'
+      - name: int1_fifo_th
+        field_pos: '3'
+      - name: int1_drdy_g
+        field_pos: '1'
+      - name: int1_drdy_xl
+        field_pos: '0'
+  - name: int2_ctrl
+    size: 1
+    address: 0x0e
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_emb_func_endop
+        field_pos: '7'
+      - name: int2_cnt_bdr
+        field_pos: '6'
+      - name: int2_fifo_full
+        field_pos: '5'
+      - name: int2_fifo_ovr
+        field_pos: '4'
+      - name: int2_fifo_th
+        field_pos: '3'
+      - name: int2_drdy_g
+        field_pos: '1'
+      - name: int2_drdy_xl
+        field_pos: '0'
+  - name: who_am_i
+    size: 1
+    address: 0x0f
+    readable: false
+    writable: true
+    reset_val: 0x73
+    fields:
+  - name: ctrl1
+    size: 1
+    address: 0x10
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: op_mode_xl
+        field_pos: '[6:4]'
+      - name: odr_xl
+        field_pos: '[3:0]'
+  - name: ctrl2
+    size: 1
+    address: 0x11
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: op_mode_g
+        field_pos: '[6:4]'
+      - name: odr_g
+        field_pos: '[3:0]'
+  - name: ctrl3
+    size: 1
+    address: 0x12
+    readable: true
+    writable: true
+    reset_val: 0x44
+    fields:
+      - name: boot
+        field_pos: '7'
+      - name: bdu
+        field_pos: '6'
+      - name: if_inc
+        field_pos: '2'
+      - name: sw_reset
+        field_pos: '0'
+  - name: ctrl4
+    size: 1
+    address: 0x13
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_on_int1
+        field_pos: '4'
+      - name: drdy_mask
+        field_pos: '3'
+      - name: int2_drdy_temp
+        field_pos: '2'
+      - name: drdy_pulsed
+        field_pos: '1'
+      - name: int2_in_lh
+        field_pos: '0'
+  - name: ctrl5
+    size: 1
+    address: 0x14
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: bus_act_sel
+        field_pos: '[2:1]'
+      - name: int_en_i3c
+        field_pos: '0'
+  - name: ctrl6
+    size: 1
+    address: 0x15
+    readable: true
+    writable: true
+    reset_val: 0x08
+    fields:
+      - name: lpf1_g_bw
+        field_pos: '[6:4]'
+      - name: fs_g
+        field_pos: '[2:0]'
+  - name: ctrl7
+    size: 1
+    address: 0x16
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int1_drdy_xl_hg
+        field_pos: '7'
+      - name: int2_drdy_xl_hg
+        field_pos: '6'
+      - name: lpf_g_en
+        field_pos: '0'
+  - name: ctrl8
+    size: 1
+    address: 0x17
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: hp_lpf2_xl_bw
+        field_pos: '[7:5]'
+      - name: fs_xl
+        field_pos: '[1:0]'
+  - name: ctrl9
+    size: 1
+    address: 0x18
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: hp_ref_mode_xl
+        field_pos: '6'
+      - name: xl_fastsettl_mode
+        field_pos: '5'
+      - name: hp_slope_xl_en
+        field_pos: '4'
+      - name: lpf2_xl_en
+        field_pos: '3'
+      - name: usr_off_w
+        field_pos: '1'
+      - name: usr_off_on_out
+        field_pos: '0'
+  - name: ctrl10
+    size: 1
+    address: 0x19
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: emb_func_debug
+        field_pos: '6'
+      - name: st_g
+        field_pos: '[3:2]'
+      - name: st_xl
+        field_pos: '[1:0]'
+  - name: ctrl_status
+    size: 1
+    address: 0x1a
+    readable: true
+    writable: false
+    fields:
+      - name: fsm_wr_ctrl_status
+        field_pos: '2'
+  - name: fifo_status1
+    size: 1
+    address: 0x1b
+    readable: true
+    writable: false
+    fields:
+      - name: diff_fifo_7_0
+        field_pos: '[7:0]'
+  - name: fifo_status2
+    size: 1
+    address: 0x1c
+    readable: true
+    writable: false
+    fields:
+      - name: fifo_wtm_ia
+        field_pos: '7'
+      - name: fifo_ovr_ia
+        field_pos: '6'
+      - name: fifo_full_a
+        field_pos: '5'
+      - name: counter_bdr_ia
+        field_pos: '4'
+      - name: fifo_ovr_latched
+        field_pos: '3'
+      - name: diff_fifo_8
+        field_pos: '0'
+  - name: all_int_src
+    size: 1
+    address: 0x1d
+    readable: true
+    writable: false
+    fields:
+      - name: emb_func_ia
+        field_pos: '7'
+      - name: shub_ia
+        field_pos: '6'
+      - name: sleep_change_ia
+        field_pos: '5'
+      - name: d6d_ia
+        field_pos: '4'
+      - name: hg_ia
+        field_pos: '3'
+      - name: tap_ia
+        field_pos: '2'
+      - name: wu_ia
+        field_pos: '1'
+      - name: ff_ia
+        field_pos: '0'
+  - name: status_reg
+    size: 1
+    address: 0x1e
+    readable: true
+    writable: false
+    fields:
+      - name: timestamp_endcount
+        field_pos: '7'
+      - name: xlhgda
+        field_pos: '3'
+      - name: tda
+        field_pos: '2'
+      - name: gda
+        field_pos: '1'
+      - name: xlda
+        field_pos: '0'
+  - name: out_temp
+    size: 2
+    address: 0x20
+    readable: true
+    writable: false
+    fields:
+  - name: outx_g
+    size: 2
+    address: 0x22
+    readable: true
+    writable: false
+    fields:
+  - name: outy_g
+    size: 2
+    address: 0x24
+    readable: true
+    writable: false
+    fields:
+  - name: outz_g
+    size: 2
+    address: 0x26
+    readable: true
+    writable: false
+    fields:
+  - name: outx_a
+    size: 2
+    address: 0x28
+    readable: true
+    writable: false
+    fields:
+  - name: outy_a
+    size: 2
+    address: 0x2a
+    readable: true
+    writable: false
+    fields:
+  - name: outz_a
+    size: 2
+    address: 0x2c
+    readable: true
+    writable: false
+    fields:
+  - name: ui_outx_a_hg
+    size: 2
+    address: 0x34
+    readable: true
+    writable: false
+    fields:
+  - name: ui_outy_a_hg
+    size: 2
+    address: 0x36
+    readable: true
+    writable: false
+    fields:
+  - name: ui_outz_a_hg
+    size: 2
+    address: 0x38
+    readable: true
+    writable: false
+    fields:
+  - name: timestamp
+    endian_override: Big
+    size: 4
+    address: 0x40
+    readable: true
+    writable: false
+    fields:
+  - name: ui_status_reg
+    size: 1
+    address: 0x44
+    readable: true
+    writable: false
+    fields:
+      - name: gyro_settling
+        field_pos: '2'
+  - name: wake_up_src
+    size: 1
+    address: 0x45
+    readable: true
+    writable: false
+    fields:
+      - name: sleep_change_ia
+        field_pos: '6'
+      - name: ff_ia
+        field_pos: '5'
+      - name: sleep_state
+        field_pos: '4'
+      - name: wu_ia
+        field_pos: '3'
+      - name: x_wu
+        field_pos: '2'
+      - name: y_wu
+        field_pos: '1'
+      - name: z_wu
+        field_pos: '0'
+  - name: tap_src
+    size: 1
+    address: 0x46
+    readable: true
+    writable: false
+    fields:
+      - name: tap_ia
+        field_pos: '6'
+      - name: single_tap
+        field_pos: '5'
+      - name: double_tap
+        field_pos: '4'
+      - name: tap_sign
+        field_pos: '3'
+      - name: x_tap
+        field_pos: '2'
+      - name: y_tap
+        field_pos: '1'
+      - name: z_tap
+        field_pos: '0'
+  - name: d6d_src
+    size: 1
+    address: 0x47
+    readable: true
+    writable: false
+    fields:
+      - name: d6d_ia
+        field_pos: '6'
+      - name: zh
+        field_pos: '5'
+      - name: zl
+        field_pos: '4'
+      - name: yh
+        field_pos: '3'
+      - name: yl
+        field_pos: '2'
+      - name: xh
+        field_pos: '1'
+      - name: xl
+        field_pos: '0'
+  - name: status_controller_mainpage
+    size: 1
+    address: 0x48
+    readable: true
+    writable: false
+    fields:
+      - name: wr_once_done
+        field_pos: '7'
+      - name: target3_nack
+        field_pos: '6'
+      - name: target2_nack
+        field_pos: '5'
+      - name: target1_nack
+        field_pos: '4'
+      - name: target0_nack
+        field_pos: '3'
+      - name: sens_hub_endop
+        field_pos: '0'
+  - name: emb_func_status_mainpage
+    size: 1
+    address: 0x49
+    readable: true
+    writable: false
+    fields:
+      - name: is_fsm_lc
+        field_pos: '7'
+      - name: is_sigmot
+        field_pos: '5'
+      - name: is_tilt
+        field_pos: '4'
+      - name: is_step_det
+        field_pos: '3'
+  - name: fsm_status_mainpage
+    size: 1
+    address: 0x4a
+    readable: true
+    writable: false
+    fields:
+      - name: is_fsm8
+        field_pos: '7'
+      - name: is_fsm7
+        field_pos: '6'
+      - name: is_fsm6
+        field_pos: '5'
+      - name: is_fsm5
+        field_pos: '4'
+      - name: is_fsm4
+        field_pos: '3'
+      - name: is_fsm3
+        field_pos: '2'
+      - name: is_fsm2
+        field_pos: '1'
+      - name: is_fsm1
+        field_pos: '0'
+  - name: mlc_status_mainpage
+    size: 1
+    address: 0x4b
+    readable: true
+    writable: false
+    fields:
+      - name: is_mlc8
+        field_pos: '7'
+      - name: is_mlc7
+        field_pos: '6'
+      - name: is_mlc6
+        field_pos: '5'
+      - name: is_mlc5
+        field_pos: '4'
+      - name: is_mlc4
+        field_pos: '3'
+      - name: is_mlc3
+        field_pos: '2'
+      - name: is_mlc2
+        field_pos: '1'
+      - name: is_mlc1
+        field_pos: '0'
+  - name: hg_wake_up_src
+    size: 1
+    address: 0x4c
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: hg_shock_change_ia
+        field_pos: '6'
+      - name: hg_shock_state
+        field_pos: '5'
+      - name: hg_wu_change_ia
+        field_pos: '4'
+      - name: hg_wu_ia
+        field_pos: '3'
+      - name: hg_x_wu
+        field_pos: '2'
+      - name: hg_y_wu
+        field_pos: '1'
+      - name: hg_z_wu
+        field_pos: '0'
+  - name: ctrl2_xl_hg
+    address: 0x4d
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: hg_usr_off_on_wu
+        field_pos: '4'
+      - name: xl_hg_st
+        field_pos: '[1:0]'
+  - name: ctrl1_xl_hg
+    address: 0x4e
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: xl_hg_regout_en
+        field_pos: '7'
+      - name: hg_usr_off_on_out
+        field_pos: '6'
+      - name: odr_xl_hg
+        field_pos: '[5:3]'
+      - name: fs_xl_hg
+        field_pos: '[2:0]'
+  - name: internal_freq_fine
+    address: 0x4f
+    size: 1
+    readable: true
+    writable: false
+    fields:
+  - name: functions_enable
+    size: 1
+    address: 0x50
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: interrupts_enable
+        field_pos: '7'
+      - name: timestamp_en
+        field_pos: '6'
+      - name: dis_rst_lir_all_int
+        field_pos: '3'
+      - name: inact_en
+        field_pos: '[1:0]'
+  - name: hg_functions_enable
+    size: 1
+    address: 0x52
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: hg_interrupts_enable
+        field_pos: '7'
+      - name: hg_wu_change_int_sel
+        field_pos: '6'
+      - name: int2_hg_wu
+        field_pos: '5'
+      - name: int1_hg_wu
+        field_pos: '4'
+      - name: hg_shock_dur
+        field_pos: '[3:0]'
+  - name: hg_wake_up_ths
+    size: 1
+    address: 0x53
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: inactivity_dur
+    size: 1
+    address: 0x54
+    readable: true
+    writable: true
+    reset_val: 0x04
+    fields:
+      - name: sleep_status_on_int
+        field_pos: '7'
+      - name: wu_inact_ths_w
+        field_pos: '[6:4]'
+      - name: xl_inact_odr
+        field_pos: '[3:2]'
+      - name: inact_dur
+        field_pos: '[1:0]'
+  - name: inactivity_ths
+    size: 1
+    address: 0x55
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_hg_shock_change
+        field_pos: '7'
+      - name: int1_hg_shock_change
+        field_pos: '6'
+      - name: inact_ths
+        field_pos: '[5:0]'
+  - name: tap_cfg0
+    size: 1
+    address: 0x56
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: low_pass_on_6d
+        field_pos: '6'
+      - name: hw_func_mask_xl_settl
+        field_pos: '5'
+      - name: slope_fds
+        field_pos: '4'
+      - name: tap_x_en
+        field_pos: '3'
+      - name: tap_y_en
+        field_pos: '2'
+      - name: tap_z_en
+        field_pos: '1'
+      - name: lir
+        field_pos: '0'
+  - name: tap_cfg1
+    size: 1
+    address: 0x57
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: tap_priority
+        field_pos: '[7:5]'
+      - name: tap_ths_x
+        field_pos: '[4:0]'
+  - name: tap_cfg2
+    size: 1
+    address: 0x58
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: tap_ths_y
+        field_pos: '[4:0]'
+  - name: tap_ths_6d
+    size: 1
+    address: 0x59
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: d4d_en
+        field_pos: '7'
+      - name: sixd_ths
+        field_pos: '[6:5]'
+      - name: tap_ths_z
+        field_pos: '[4:0]'
+  - name: tap_dur
+    size: 1
+    address: 0x5a
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: dur
+        field_pos: '[7:4]'
+      - name: quiet
+        field_pos: '[3:2]'
+      - name: shock
+        field_pos: '[1:0]'
+  - name: wake_up_ths
+    size: 1
+    address: 0x5b
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: single_double_tap
+        field_pos: '7'
+      - name: usr_off_on_wu
+        field_pos: '6'
+      - name: wk_ths
+        field_pos: '[5:0]'
+  - name: wake_up_dur
+    size: 1
+    address: 0x5c
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: ff_dur_5
+        field_pos: '7'
+      - name: wake_dur
+        field_pos: '[6:5]'
+      - name: sleep_dur
+        field_pos: '[3:0]'
+  - name: free_fall
+    size: 1
+    address: 0x5d
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: ff_dur_4_0
+        field_pos: '[7:3]'
+      - name: ff_ths
+        field_pos: '[2:0]'
+  - name: md1_cfg
+    size: 1
+    address: 0x5e
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int1_sleep_change
+        field_pos: '7'
+      - name: int1_single_tap
+        field_pos: '6'
+      - name: int1_wu
+        field_pos: '5'
+      - name: int1_ff
+        field_pos: '4'
+      - name: int1_double_tap
+        field_pos: '3'
+      - name: int1_6d
+        field_pos: '2'
+      - name: int1_emb_func
+        field_pos: '1'
+      - name: int1_shub
+        field_pos: '0'
+  - name: md2_cfg
+    size: 1
+    address: 0x5f
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_sleep_change
+        field_pos: '7'
+      - name: int2_single_tap
+        field_pos: '6'
+      - name: int2_wu
+        field_pos: '5'
+      - name: int2_ff
+        field_pos: '4'
+      - name: int2_double_tap
+        field_pos: '3'
+      - name: int2_6d
+        field_pos: '2'
+      - name: int2_emb_func
+        field_pos: '1'
+      - name: int2_timestamp
+        field_pos: '0'
+  - name: haodr_cfg
+    size: 1
+    address: 0x62
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: haodr_sel
+        field_pos: '[1:0]'
+  - name: emb_func_cfg
+    size: 1
+    address: 0x63
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: hg_usr_off_on_emb_func
+        field_pos: '7'
+      - name: emb_func_irq_mask_xl_hg_settl
+        field_pos: '6'
+      - name: emb_func_irq_mask_g_settl
+        field_pos: '5'
+      - name: emb_func_irq_mask_xl_settl
+        field_pos: '4'
+      - name: emb_func_disable
+        field_pos: '3'
+  - name: xl_hg_x_ofs_usr
+    size: 1
+    address: 0x6c
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: xl_hg_y_ofs_usr
+    size: 1
+    address: 0x6d
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: xl_hg_z_ofs_usr
+    size: 1
+    address: 0x6e
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: x_ofs_usr
+    size: 1
+    address: 0x73
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: y_ofs_usr
+    size: 1
+    address: 0x74
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: z_ofs_usr
+    size: 1
+    address: 0x75
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: fifo_data_out_tag
+    size: 1
+    address: 0x78
+    readable: true
+    writable: false
+    fields:
+      - name: tag_sensor
+        field_pos: '[7:3]'
+      - name: tag_cnt
+        field_pos: '[2:1]'
+  - name: fifo_data_out_x
+    size: 2
+    address: 0x79
+    readable: true
+    writable: false
+    fields:
+  - name: fifo_data_out_y
+    size: 2
+    address: 0x7b
+    readable: true
+    writable: false
+    fields:
+  - name: fifo_data_out_z
+    size: 2
+    address: 0x7d
+    readable: true
+    writable: false
+    fields:
