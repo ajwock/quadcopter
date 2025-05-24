@@ -79,6 +79,37 @@ mod fifo_data_out_tag;
 mod fifo_data_out_x;
 mod fifo_data_out_y;
 mod fifo_data_out_z;
+mod page_sel;
+mod emb_func_en_a;
+mod emb_func_en_b;
+mod emb_func_exec_status;
+mod page_address;
+mod page_value;
+mod emb_func_int1;
+mod fsm_int1;
+mod mlc_int1;
+mod emb_func_int2;
+mod fsm_int2;
+mod mlc_int2;
+mod emb_func_status;
+mod fsm_status;
+mod mlc_status;
+mod page_rw;
+mod sflp_gbiasx;
+mod sflp_gbiasy;
+mod sflp_gbiasz;
+mod sflp_gravx;
+mod sflp_gravy;
+mod sflp_gravz;
+mod sflp_quatw;
+mod sflp_quatx;
+mod sflp_quaty;
+mod sflp_quatz;
+mod sflp_biasx_init;
+mod sflp_biasy_init;
+mod sflp_biasz_init;
+mod emb_func_fifo_en_a;
+mod reg_mapping;
 use regcomms::{RegComms, RegCommsError, RegCommsAccessProc};
 use spin::once::Once;
 #[derive(Default)]
@@ -97,15 +128,18 @@ impl<C: RegComms<1, u8>> RegCommsAccessProc<Lsm6Dsv<C>, 1, u8> for StandardAcces
         peripheral.comms.comms_write_async(reg_address, buf).await
     }
 }
+static EMBEDDED_FUNC: Once<crate::reg_mapping::EmbeddedFunction> = Once::new();
 static STANDARD: Once<StandardAccessProc> = Once::new();
 pub struct Lsm6Dsv<C: RegComms<1, u8>> {
     comms: C,
+    embedded_func: &'static crate::reg_mapping::EmbeddedFunction,
     standard: &'static StandardAccessProc,
 }
 impl<C: RegComms<1, u8>> Lsm6Dsv<C> {
     pub fn new(comms: C) -> Self {
         Self {
              comms,
+            embedded_func: EMBEDDED_FUNC.call_once(|| Default::default()),
             standard: STANDARD.call_once(|| Default::default()),
         }
     }
@@ -342,5 +376,95 @@ impl<C: RegComms<1, u8>> Lsm6Dsv<C> {
     }
     pub fn fifo_data_out_z<'a>(&'a mut self) -> fifo_data_out_z::FifoDataOutZ<'a, C> {
         fifo_data_out_z::FifoDataOutZ(self)
+    }
+    pub fn page_sel<'a>(&'a mut self) -> page_sel::PageSel<'a, C> {
+        page_sel::PageSel(self)
+    }
+    pub fn emb_func_en_a<'a>(&'a mut self) -> emb_func_en_a::EmbFuncEnA<'a, C> {
+        emb_func_en_a::EmbFuncEnA(self)
+    }
+    pub fn emb_func_en_b<'a>(&'a mut self) -> emb_func_en_b::EmbFuncEnB<'a, C> {
+        emb_func_en_b::EmbFuncEnB(self)
+    }
+    pub fn emb_func_exec_status<'a>(&'a mut self) -> emb_func_exec_status::EmbFuncExecStatus<'a, C> {
+        emb_func_exec_status::EmbFuncExecStatus(self)
+    }
+    pub fn page_address<'a>(&'a mut self) -> page_address::PageAddress<'a, C> {
+        page_address::PageAddress(self)
+    }
+    pub fn page_value<'a>(&'a mut self) -> page_value::PageValue<'a, C> {
+        page_value::PageValue(self)
+    }
+    pub fn emb_func_int1<'a>(&'a mut self) -> emb_func_int1::EmbFuncInt1<'a, C> {
+        emb_func_int1::EmbFuncInt1(self)
+    }
+    pub fn fsm_int1<'a>(&'a mut self) -> fsm_int1::FsmInt1<'a, C> {
+        fsm_int1::FsmInt1(self)
+    }
+    pub fn mlc_int1<'a>(&'a mut self) -> mlc_int1::MlcInt1<'a, C> {
+        mlc_int1::MlcInt1(self)
+    }
+    pub fn emb_func_int2<'a>(&'a mut self) -> emb_func_int2::EmbFuncInt2<'a, C> {
+        emb_func_int2::EmbFuncInt2(self)
+    }
+    pub fn fsm_int2<'a>(&'a mut self) -> fsm_int2::FsmInt2<'a, C> {
+        fsm_int2::FsmInt2(self)
+    }
+    pub fn mlc_int2<'a>(&'a mut self) -> mlc_int2::MlcInt2<'a, C> {
+        mlc_int2::MlcInt2(self)
+    }
+    pub fn emb_func_status<'a>(&'a mut self) -> emb_func_status::EmbFuncStatus<'a, C> {
+        emb_func_status::EmbFuncStatus(self)
+    }
+    pub fn fsm_status<'a>(&'a mut self) -> fsm_status::FsmStatus<'a, C> {
+        fsm_status::FsmStatus(self)
+    }
+    pub fn mlc_status<'a>(&'a mut self) -> mlc_status::MlcStatus<'a, C> {
+        mlc_status::MlcStatus(self)
+    }
+    pub fn page_rw<'a>(&'a mut self) -> page_rw::PageRw<'a, C> {
+        page_rw::PageRw(self)
+    }
+    pub fn sflp_gbiasx<'a>(&'a mut self) -> sflp_gbiasx::SflpGbiasx<'a, C> {
+        sflp_gbiasx::SflpGbiasx(self)
+    }
+    pub fn sflp_gbiasy<'a>(&'a mut self) -> sflp_gbiasy::SflpGbiasy<'a, C> {
+        sflp_gbiasy::SflpGbiasy(self)
+    }
+    pub fn sflp_gbiasz<'a>(&'a mut self) -> sflp_gbiasz::SflpGbiasz<'a, C> {
+        sflp_gbiasz::SflpGbiasz(self)
+    }
+    pub fn sflp_gravx<'a>(&'a mut self) -> sflp_gravx::SflpGravx<'a, C> {
+        sflp_gravx::SflpGravx(self)
+    }
+    pub fn sflp_gravy<'a>(&'a mut self) -> sflp_gravy::SflpGravy<'a, C> {
+        sflp_gravy::SflpGravy(self)
+    }
+    pub fn sflp_gravz<'a>(&'a mut self) -> sflp_gravz::SflpGravz<'a, C> {
+        sflp_gravz::SflpGravz(self)
+    }
+    pub fn sflp_quatw<'a>(&'a mut self) -> sflp_quatw::SflpQuatw<'a, C> {
+        sflp_quatw::SflpQuatw(self)
+    }
+    pub fn sflp_quatx<'a>(&'a mut self) -> sflp_quatx::SflpQuatx<'a, C> {
+        sflp_quatx::SflpQuatx(self)
+    }
+    pub fn sflp_quaty<'a>(&'a mut self) -> sflp_quaty::SflpQuaty<'a, C> {
+        sflp_quaty::SflpQuaty(self)
+    }
+    pub fn sflp_quatz<'a>(&'a mut self) -> sflp_quatz::SflpQuatz<'a, C> {
+        sflp_quatz::SflpQuatz(self)
+    }
+    pub fn sflp_biasx_init<'a>(&'a mut self) -> sflp_biasx_init::SflpBiasxInit<'a, C> {
+        sflp_biasx_init::SflpBiasxInit(self)
+    }
+    pub fn sflp_biasy_init<'a>(&'a mut self) -> sflp_biasy_init::SflpBiasyInit<'a, C> {
+        sflp_biasy_init::SflpBiasyInit(self)
+    }
+    pub fn sflp_biasz_init<'a>(&'a mut self) -> sflp_biasz_init::SflpBiaszInit<'a, C> {
+        sflp_biasz_init::SflpBiaszInit(self)
+    }
+    pub fn emb_func_fifo_en_a<'a>(&'a mut self) -> emb_func_fifo_en_a::EmbFuncFifoEnA<'a, C> {
+        emb_func_fifo_en_a::EmbFuncFifoEnA(self)
     }
 }

@@ -1,7 +1,11 @@
 name: Lsm6Dsv
 byte_order: Little
 address_len: 1
-
+non_standard_access_procs:
+  - proc_name: "embedded_func"
+    struct_path: "crate::reg_mapping::EmbeddedFunction"
+extra_mods:
+  - "reg_mapping"
 registers:
   - name: func_cfg_access
     address: 0x01
@@ -954,4 +958,379 @@ registers:
     address: 0x7d
     readable: true
     writable: false
+    fields:
+
+  - name: page_sel
+    size: 1
+    address: 0x02
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x01
+    fields:
+      - name: page_sel
+        field_pos: '[7:4]'
+  - name: emb_func_en_a
+    size: 1
+    address: 0x04
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: mlc_before_fsm_en
+        field_pos: '7'
+      - name: sign_motion_en
+        field_pos: '5'
+      - name: tilt_en
+        field_pos: '4'
+      - name: pedo_en
+        field_pos: '3'
+      - name: sflp_game_en
+        field_pos: '1'
+  - name: emb_func_en_b
+    size: 1
+    address: 0x05
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: mlc_en
+        field_pos: '4'
+      - name: fifo_compr_en
+        field_pos: '3'
+      - name: fsm_en
+        field_pos: '0'
+  - name: emb_func_exec_status
+    size: 1
+    address: 0x07
+    access_proc: "embedded_func"
+    readable: true
+    writable: false
+    fields:
+      - name: emb_func_exec_ovr
+        field_pos: '1'
+      - name: emb_func_endop
+        field_pos: '0'
+  - name: page_address
+    size: 1
+    address: 0x08
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: page_value
+    size: 1
+    address: 0x09
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: emb_func_int1
+    size: 1
+    address: 0x0a
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int1_fsm_lc
+        field_pos: '7'
+      - name: int1_sig_Mot
+        field_pos: '5'
+      - name: int1_tilt
+        field_pos: '4'
+      - name: int1_step_detector
+        field_pos: '3'
+  - name: fsm_int1
+    size: 1
+    address: 0x0b
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int1_fsm8
+        field_pos: '7'
+      - name: int1_fsm7
+        field_pos: '6'
+      - name: int1_fsm6
+        field_pos: '5'
+      - name: int1_fsm5
+        field_pos: '4'
+      - name: int1_fsm4
+        field_pos: '3'
+      - name: int1_fsm3
+        field_pos: '2'
+      - name: int1_fsm2
+        field_pos: '1'
+      - name: int1_fsm1
+        field_pos: '0'
+  - name: mlc_int1
+    size: 1
+    address: 0x0d
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int1_mlc8
+        field_pos: '7'
+      - name: int1_mlc7
+        field_pos: '6'
+      - name: int1_mlc6
+        field_pos: '5'
+      - name: int1_mlc5
+        field_pos: '4'
+      - name: int1_mlc4
+        field_pos: '3'
+      - name: int1_mlc3
+        field_pos: '2'
+      - name: int1_mlc2
+        field_pos: '1'
+      - name: int1_mlc1
+        field_pos: '0'
+  - name: emb_func_int2
+    size: 1
+    address: 0x0e
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_fsm_lc
+        field_pos: '7'
+      - name: int_sig_mot
+        field_pos: '5'
+      - name: int2_tilt
+        field_pos: '4'
+      - name: int2_step_detector
+        field_pos: '3'
+  - name: fsm_int2
+    size: 1
+    address: 0x0f
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_fsm8
+        field_pos: '7'
+      - name: int2_fsm7
+        field_pos: '6'
+      - name: int2_fsm6
+        field_pos: '5'
+      - name: int2_fsm5
+        field_pos: '4'
+      - name: int2_fsm4
+        field_pos: '3'
+      - name: int2_fsm3
+        field_pos: '2'
+      - name: int2_fsm2
+        field_pos: '1'
+      - name: int2_fsm1
+        field_pos: '0'
+  - name: mlc_int2
+    size: 1
+    address: 0x11
+    access_proc: "embedded_func"
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: int2_mlc8
+        field_pos: '7'
+      - name: int2_mlc7
+        field_pos: '6'
+      - name: int2_mlc6
+        field_pos: '5'
+      - name: int2_mlc5
+        field_pos: '4'
+      - name: int2_mlc4
+        field_pos: '3'
+      - name: int2_mlc3
+        field_pos: '2'
+      - name: int2_mlc2
+        field_pos: '1'
+      - name: int2_mlc1
+        field_pos: '0'
+  - name: emb_func_status
+    size: 1
+    address: 0x12
+    access_proc: "embedded_func"
+    readable: true
+    writable: false 
+    fields:
+      - name: is_fsm_lc
+        field_pos: '7'
+      - name: is_sigmot
+        field_pos: '5'
+      - name: is_tilt
+        field_pos: '4'
+      - name: is_step_det
+        field_pos: '3'
+  - name: fsm_status
+    size: 1
+    address: 0x13
+    access_proc: "embedded_func"
+    readable: true
+    writable: false 
+    fields:
+      - name: is_fsm8
+        field_pos: '7'
+      - name: is_fsm7
+        field_pos: '6'
+      - name: is_fsm6
+        field_pos: '5'
+      - name: is_fsm5
+        field_pos: '4'
+      - name: is_fsm4
+        field_pos: '3'
+      - name: is_fsm3
+        field_pos: '2'
+      - name: is_fsm2
+        field_pos: '1'
+      - name: is_fsm1
+        field_pos: '0'
+  - name: mlc_status
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x15
+    readable: true
+    writable: false
+    fields:
+      - name: is_mlc8
+        field_pos: '7'
+      - name: is_mlc7
+        field_pos: '6'
+      - name: is_mlc6
+        field_pos: '5'
+      - name: is_mlc5
+        field_pos: '4'
+      - name: is_mlc4
+        field_pos: '3'
+      - name: is_mlc3
+        field_pos: '2'
+      - name: is_mlc2
+        field_pos: '1'
+      - name: is_mlc1
+        field_pos: '0'
+  - name: page_rw
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x17
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: emb_func_lir
+        field_pos: '7'
+      - name: page_write
+        field_pos: '6'
+      - name: page_read
+        field_pos: '5'
+  - name: sflp_gbiasx
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x18
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_gbiasy
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x1a
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_gbiasz
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x1c
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_gravx
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x1e
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_gravy
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x20
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_gravz
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x22
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_quatw
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x2a
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_quatx
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x2c
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_quaty
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x2e
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_quatz
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x30
+    readable: true
+    writable: false
+    fields:
+  - name: sflp_biasx_init
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x32
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: sflp_biasy_init
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x34
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: sflp_biasz_init
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x36
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: emb_func_fifo_en_a
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x44
+    readable: true
+    writable: true
+    reset_val: 0x00
     fields:
