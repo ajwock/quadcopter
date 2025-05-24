@@ -1334,3 +1334,425 @@ registers:
     writable: true
     reset_val: 0x00
     fields:
+      - name: mlc_fifo_en
+        field_pos: '7'
+      - name: step_counter_fifo_en
+        field_pos: '6'
+      - name: sflp_gbias_fifo_en
+        field_pos: '5'
+      - name: sflp_gravity_fifo_en
+        field_pos: '4'
+      - name: sflp_game_fifo_en
+        field_pos: '1'
+  - name: emb_func_fifo_en_b
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x45
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: fsm_fifo_en
+        field_pos: '2'
+      - name: mlc_filter_feature_fifo_en
+        field_pos: '1'
+  - name: fsm_enable
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x46
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: fsm8_en
+        field_pos: '7'
+      - name: fsm7_en
+        field_pos: '6'
+      - name: fsm6_en
+        field_pos: '5'
+      - name: fsm5_en
+        field_pos: '4'
+      - name: fsm4_en
+        field_pos: '3'
+      - name: fsm3_en
+        field_pos: '2'
+      - name: fsm2_en
+        field_pos: '1'
+      - name: fsm1_en
+        field_pos: '0'
+  - name: fsm_long_counter
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x48
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: int_ack_mask
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x4b
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: iack_mask8
+        field_pos: '7'
+      - name: iack_mask7
+        field_pos: '6'
+      - name: iack_mask6
+        field_pos: '5'
+      - name: iack_mask5
+        field_pos: '4'
+      - name: iack_mask4
+        field_pos: '3'
+      - name: iack_mask3
+        field_pos: '2'
+      - name: iack_mask2
+        field_pos: '1'
+      - name: iack_mask1
+        field_pos: '0'
+  - name: fsm_outs1
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x4c
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs2
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x4d
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs3
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x4e
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs4
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x4f
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs5
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x50
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs6
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x51
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs7
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x52
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: fsm_outs8
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x53
+    readable: true
+    writable: false
+    fields:
+      - name: p_x
+        field_pos: '7'
+      - name: n_x
+        field_pos: '6'
+      - name: p_y
+        field_pos: '5'
+      - name: n_y
+        field_pos: '4'
+      - name: p_z
+        field_pos: '3'
+      - name: n_z
+        field_pos: '2'
+      - name: p_v
+        field_pos: '1'
+      - name: n_v
+        field_pos: '0'
+  - name: sflp_odr
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x5e
+    readable: true
+    writable: true
+    reset_val: 0x5b
+    fields:
+      - name: sflp_game_odr
+        field_pos: '[5:3]'
+  - name: fsm_odr
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x5f
+    readable: true
+    writable: true
+    reset_val: 0x4b
+    fields:
+      - name: fsm_odr
+        field_pos: '[5:3]'
+  - name: mlc_odr
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x60
+    readable: true
+    writable: true
+    reset_val: 0x15
+    fields:
+      - name: mlc_odr
+        field_pos: '[6:4]'
+  - name: step_counter
+    size: 2
+    access_proc: "embedded_func"
+    address: 0x62
+    readable: true
+    writable: false
+    fields:
+  - name: emb_func_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x64
+    readable: true
+    writable: true
+    fields:
+      - name: pedo_rst_step
+        field_pos: '7'
+      - name: step_detected
+        field_pos: '5'
+      - name: step_count_delta_ia
+        field_pos: '4'
+      - name: step_overflow
+        field_pos: '3'
+      - name: stepcounter_bit_set
+        field_pos: '2'
+  - name: emb_func_init_a
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x66
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: mlc_before_fsm_init
+        field_pos: '7'
+      - name: sig_mot_init
+        field_pos: '5'
+      - name: tilt_init
+        field_pos: '4'
+      - name: step_det_init
+        field_pos: '3'
+      - name: sflp_game_init
+        field_pos: '1'
+  - name: emb_func_init_b
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x67
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+      - name: mlc_init
+        field_pos: '4'
+      - name: fifo_compr_init
+        field_pos: '3'
+      - name: pt_init
+        field_pos: '2'
+      - name: fsm_init
+        field_pos: '0'
+  - name: emb_func_sensor_conv_en
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x6e
+    readable: true
+    writable: true
+    reset_val: 0x0f
+    fields:
+      - name: ext_sensor_conv_en
+        field_pos: '3'
+      - name: temp_conv_en
+        field_pos: '2'
+      - name: gyro_conv_en
+        field_pos: '1'
+      - name: xl_hg_conv_en
+        field_pos: '0'
+  - name: mlc1_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x70
+    readable: true
+    writable: false
+    fields:
+  - name: mlc2_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x71
+    readable: true
+    writable: false
+    fields:
+  - name: mlc3_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x72
+    readable: true
+    writable: false
+    fields:
+  - name: mlc4_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x73
+    readable: true
+    writable: false
+    fields:
+  - name: mlc5_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x74
+    readable: true
+    writable: false
+    fields:
+  - name: mlc6_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x75
+    readable: true
+    writable: false
+    fields:
+  - name: mlc7_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x76
+    readable: true
+    writable: false
+    fields:
+  - name: mlc8_src
+    size: 1
+    access_proc: "embedded_func"
+    address: 0x77
+    readable: true
+    writable: false
+    fields:

@@ -64,4 +64,144 @@ impl EmbFuncFifoEnAVal {
     pub fn reset_val() -> Self {
         Self(0x0)
     }
+    pub fn mlc_fifo_en<'a>(&'a mut self) -> FieldMlcFifoEn<'a> {
+        FieldMlcFifoEn(self)
+    }
+    pub fn step_counter_fifo_en<'a>(&'a mut self) -> FieldStepCounterFifoEn<'a> {
+        FieldStepCounterFifoEn(self)
+    }
+    pub fn sflp_gbias_fifo_en<'a>(&'a mut self) -> FieldSflpGbiasFifoEn<'a> {
+        FieldSflpGbiasFifoEn(self)
+    }
+    pub fn sflp_gravity_fifo_en<'a>(&'a mut self) -> FieldSflpGravityFifoEn<'a> {
+        FieldSflpGravityFifoEn(self)
+    }
+    pub fn sflp_game_fifo_en<'a>(&'a mut self) -> FieldSflpGameFifoEn<'a> {
+        FieldSflpGameFifoEn(self)
+    }
+}
+pub struct FieldMlcFifoEn<'a>(pub &'a mut EmbFuncFifoEnAVal);
+impl<'a> FieldMlcFifoEn<'a> {
+    pub fn bit(&self) -> bool {
+        ((self.0.0 >> 7) & 1) != 0
+    }
+    pub fn bit_is_set(&self) -> bool {
+        self.bit()
+    }
+    pub fn assign(self, val: bool) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 7);
+        self.0.0 |= (val as u8) << 7;
+        self.0
+    }
+    pub fn set_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(true)
+    }
+    pub fn clear_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 7);
+        self.0.0 |= (1 << 7) & 0x0;
+        self.0
+    }
+}
+pub struct FieldStepCounterFifoEn<'a>(pub &'a mut EmbFuncFifoEnAVal);
+impl<'a> FieldStepCounterFifoEn<'a> {
+    pub fn bit(&self) -> bool {
+        ((self.0.0 >> 6) & 1) != 0
+    }
+    pub fn bit_is_set(&self) -> bool {
+        self.bit()
+    }
+    pub fn assign(self, val: bool) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 6);
+        self.0.0 |= (val as u8) << 6;
+        self.0
+    }
+    pub fn set_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(true)
+    }
+    pub fn clear_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 6);
+        self.0.0 |= (1 << 6) & 0x0;
+        self.0
+    }
+}
+pub struct FieldSflpGbiasFifoEn<'a>(pub &'a mut EmbFuncFifoEnAVal);
+impl<'a> FieldSflpGbiasFifoEn<'a> {
+    pub fn bit(&self) -> bool {
+        ((self.0.0 >> 5) & 1) != 0
+    }
+    pub fn bit_is_set(&self) -> bool {
+        self.bit()
+    }
+    pub fn assign(self, val: bool) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 5);
+        self.0.0 |= (val as u8) << 5;
+        self.0
+    }
+    pub fn set_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(true)
+    }
+    pub fn clear_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 5);
+        self.0.0 |= (1 << 5) & 0x0;
+        self.0
+    }
+}
+pub struct FieldSflpGravityFifoEn<'a>(pub &'a mut EmbFuncFifoEnAVal);
+impl<'a> FieldSflpGravityFifoEn<'a> {
+    pub fn bit(&self) -> bool {
+        ((self.0.0 >> 4) & 1) != 0
+    }
+    pub fn bit_is_set(&self) -> bool {
+        self.bit()
+    }
+    pub fn assign(self, val: bool) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 4);
+        self.0.0 |= (val as u8) << 4;
+        self.0
+    }
+    pub fn set_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(true)
+    }
+    pub fn clear_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 4);
+        self.0.0 |= (1 << 4) & 0x0;
+        self.0
+    }
+}
+pub struct FieldSflpGameFifoEn<'a>(pub &'a mut EmbFuncFifoEnAVal);
+impl<'a> FieldSflpGameFifoEn<'a> {
+    pub fn bit(&self) -> bool {
+        ((self.0.0 >> 1) & 1) != 0
+    }
+    pub fn bit_is_set(&self) -> bool {
+        self.bit()
+    }
+    pub fn assign(self, val: bool) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 1);
+        self.0.0 |= (val as u8) << 1;
+        self.0
+    }
+    pub fn set_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(true)
+    }
+    pub fn clear_bit(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.assign(false)
+    }
+    pub fn reset(self) -> &'a mut EmbFuncFifoEnAVal {
+        self.0.0 &= !(1 << 1);
+        self.0.0 |= (1 << 1) & 0x0;
+        self.0
+    }
 }

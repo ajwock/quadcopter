@@ -113,7 +113,7 @@ dependencies = [
 [[package]]
 name = "regcomms"
 version = "0.1.0"
-source = "git+https://github.com/ajwock/regcomms.git#67a09d16cba71bdd6b003562eec86da6ad849930"
+source = "git+https://github.com/ajwock/regcomms.git#5227f1d6dc5912a8c4b9f1230e58ec8b30d32066"
 dependencies = [
  "embedded-hal-async",
 ]
@@ -121,7 +121,7 @@ dependencies = [
 [[package]]
 name = "regcommsgen"
 version = "0.1.0"
-source = "git+https://github.com/ajwock/regcomms.git#67a09d16cba71bdd6b003562eec86da6ad849930"
+source = "git+https://github.com/ajwock/regcomms.git#5227f1d6dc5912a8c4b9f1230e58ec8b30d32066"
 dependencies = [
  "itertools",
  "serde",

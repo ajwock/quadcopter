@@ -1,0 +1,10 @@
+[package]
+name = "lsm6dsv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+embedded-hal-async = "1.0.0"
+lsm6dsv_pac = { path = "../lsm6dsv_pac" }
+regcomms = { git = "https://github.com/ajwock/regcomms.git", package = "regcomms", features = ["embedded-hal-async"] }
+

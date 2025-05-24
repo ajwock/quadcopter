@@ -209,7 +209,7 @@ async fn main(spawner: Spawner) {
     }
 
 
-    //CONTROLLER_CONNECTED.wait().await;
+    CONTROLLER_CONNECTED.wait().await;
     /* IMU SETUP */
     let mut conn_led = Output::new(
         peripherals.GPIO8,

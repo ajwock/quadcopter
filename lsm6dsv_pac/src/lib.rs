@@ -109,6 +109,34 @@ mod sflp_biasx_init;
 mod sflp_biasy_init;
 mod sflp_biasz_init;
 mod emb_func_fifo_en_a;
+mod emb_func_fifo_en_b;
+mod fsm_enable;
+mod fsm_long_counter;
+mod int_ack_mask;
+mod fsm_outs1;
+mod fsm_outs2;
+mod fsm_outs3;
+mod fsm_outs4;
+mod fsm_outs5;
+mod fsm_outs6;
+mod fsm_outs7;
+mod fsm_outs8;
+mod sflp_odr;
+mod fsm_odr;
+mod mlc_odr;
+mod step_counter;
+mod emb_func_src;
+mod emb_func_init_a;
+mod emb_func_init_b;
+mod emb_func_sensor_conv_en;
+mod mlc1_src;
+mod mlc2_src;
+mod mlc3_src;
+mod mlc4_src;
+mod mlc5_src;
+mod mlc6_src;
+mod mlc7_src;
+mod mlc8_src;
 mod reg_mapping;
 use regcomms::{RegComms, RegCommsError, RegCommsAccessProc};
 use spin::once::Once;
@@ -466,5 +494,89 @@ impl<C: RegComms<1, u8>> Lsm6Dsv<C> {
     }
     pub fn emb_func_fifo_en_a<'a>(&'a mut self) -> emb_func_fifo_en_a::EmbFuncFifoEnA<'a, C> {
         emb_func_fifo_en_a::EmbFuncFifoEnA(self)
+    }
+    pub fn emb_func_fifo_en_b<'a>(&'a mut self) -> emb_func_fifo_en_b::EmbFuncFifoEnB<'a, C> {
+        emb_func_fifo_en_b::EmbFuncFifoEnB(self)
+    }
+    pub fn fsm_enable<'a>(&'a mut self) -> fsm_enable::FsmEnable<'a, C> {
+        fsm_enable::FsmEnable(self)
+    }
+    pub fn fsm_long_counter<'a>(&'a mut self) -> fsm_long_counter::FsmLongCounter<'a, C> {
+        fsm_long_counter::FsmLongCounter(self)
+    }
+    pub fn int_ack_mask<'a>(&'a mut self) -> int_ack_mask::IntAckMask<'a, C> {
+        int_ack_mask::IntAckMask(self)
+    }
+    pub fn fsm_outs1<'a>(&'a mut self) -> fsm_outs1::FsmOuts1<'a, C> {
+        fsm_outs1::FsmOuts1(self)
+    }
+    pub fn fsm_outs2<'a>(&'a mut self) -> fsm_outs2::FsmOuts2<'a, C> {
+        fsm_outs2::FsmOuts2(self)
+    }
+    pub fn fsm_outs3<'a>(&'a mut self) -> fsm_outs3::FsmOuts3<'a, C> {
+        fsm_outs3::FsmOuts3(self)
+    }
+    pub fn fsm_outs4<'a>(&'a mut self) -> fsm_outs4::FsmOuts4<'a, C> {
+        fsm_outs4::FsmOuts4(self)
+    }
+    pub fn fsm_outs5<'a>(&'a mut self) -> fsm_outs5::FsmOuts5<'a, C> {
+        fsm_outs5::FsmOuts5(self)
+    }
+    pub fn fsm_outs6<'a>(&'a mut self) -> fsm_outs6::FsmOuts6<'a, C> {
+        fsm_outs6::FsmOuts6(self)
+    }
+    pub fn fsm_outs7<'a>(&'a mut self) -> fsm_outs7::FsmOuts7<'a, C> {
+        fsm_outs7::FsmOuts7(self)
+    }
+    pub fn fsm_outs8<'a>(&'a mut self) -> fsm_outs8::FsmOuts8<'a, C> {
+        fsm_outs8::FsmOuts8(self)
+    }
+    pub fn sflp_odr<'a>(&'a mut self) -> sflp_odr::SflpOdr<'a, C> {
+        sflp_odr::SflpOdr(self)
+    }
+    pub fn fsm_odr<'a>(&'a mut self) -> fsm_odr::FsmOdr<'a, C> {
+        fsm_odr::FsmOdr(self)
+    }
+    pub fn mlc_odr<'a>(&'a mut self) -> mlc_odr::MlcOdr<'a, C> {
+        mlc_odr::MlcOdr(self)
+    }
+    pub fn step_counter<'a>(&'a mut self) -> step_counter::StepCounter<'a, C> {
+        step_counter::StepCounter(self)
+    }
+    pub fn emb_func_src<'a>(&'a mut self) -> emb_func_src::EmbFuncSrc<'a, C> {
+        emb_func_src::EmbFuncSrc(self)
+    }
+    pub fn emb_func_init_a<'a>(&'a mut self) -> emb_func_init_a::EmbFuncInitA<'a, C> {
+        emb_func_init_a::EmbFuncInitA(self)
+    }
+    pub fn emb_func_init_b<'a>(&'a mut self) -> emb_func_init_b::EmbFuncInitB<'a, C> {
+        emb_func_init_b::EmbFuncInitB(self)
+    }
+    pub fn emb_func_sensor_conv_en<'a>(&'a mut self) -> emb_func_sensor_conv_en::EmbFuncSensorConvEn<'a, C> {
+        emb_func_sensor_conv_en::EmbFuncSensorConvEn(self)
+    }
+    pub fn mlc1_src<'a>(&'a mut self) -> mlc1_src::Mlc1Src<'a, C> {
+        mlc1_src::Mlc1Src(self)
+    }
+    pub fn mlc2_src<'a>(&'a mut self) -> mlc2_src::Mlc2Src<'a, C> {
+        mlc2_src::Mlc2Src(self)
+    }
+    pub fn mlc3_src<'a>(&'a mut self) -> mlc3_src::Mlc3Src<'a, C> {
+        mlc3_src::Mlc3Src(self)
+    }
+    pub fn mlc4_src<'a>(&'a mut self) -> mlc4_src::Mlc4Src<'a, C> {
+        mlc4_src::Mlc4Src(self)
+    }
+    pub fn mlc5_src<'a>(&'a mut self) -> mlc5_src::Mlc5Src<'a, C> {
+        mlc5_src::Mlc5Src(self)
+    }
+    pub fn mlc6_src<'a>(&'a mut self) -> mlc6_src::Mlc6Src<'a, C> {
+        mlc6_src::Mlc6Src(self)
+    }
+    pub fn mlc7_src<'a>(&'a mut self) -> mlc7_src::Mlc7Src<'a, C> {
+        mlc7_src::Mlc7Src(self)
+    }
+    pub fn mlc8_src<'a>(&'a mut self) -> mlc8_src::Mlc8Src<'a, C> {
+        mlc8_src::Mlc8Src(self)
     }
 }
