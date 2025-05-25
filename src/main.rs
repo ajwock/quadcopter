@@ -249,7 +249,7 @@ async fn main(spawner: Spawner) {
         accel_config: Some(AccelConfig {
             accel_range: AccelRange::G4,
             accel_odr:   ODR::Hz1600,
-            accel_dlpf:  DLPF::Bypassed,
+            accel_dlpf:  DLPF::Hz16,
         }),
         gyro_config: Some(GyroConfig {
             gyro_range: GyroRange::DPS2000,
