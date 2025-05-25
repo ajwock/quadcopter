@@ -249,6 +249,10 @@ async fn main(spawner: Spawner) {
     //println!("Powering on");
     println!("Configuring");
     imu.configure(config).await.unwrap();
+    use regcomms::RegCommsAccessProc;
+    let standard = imu.p.standard;
+    // Manually write Hz16 config
+    standard.proc_write_async(&mut imu.p, 0x24, &[0b111]).await.unwrap();
     println!("Configured");
     imu.enable().await.unwrap();
  
