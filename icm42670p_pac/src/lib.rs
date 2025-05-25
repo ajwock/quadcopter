@@ -118,10 +118,10 @@ impl<D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> RegCommsAccessPr
 static MREG_1: Once<crate::bank_access::Mreg1> = Once::new();
 static STANDARD: Once<StandardAccessProc> = Once::new();
 pub struct Icm42670P<D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> {
-    delay: D,
-    comms: C,
-    mreg_1: &'static crate::bank_access::Mreg1,
-    standard: &'static StandardAccessProc,
+    pub delay: D,
+    pub comms: C,
+    pub mreg_1: &'static crate::bank_access::Mreg1,
+    pub standard: &'static StandardAccessProc,
 }
 impl<D: embedded_hal_async::delay::DelayNs, C: RegComms<1, u8>> Icm42670P<D, C> {
     pub fn new(delay: D, comms: C) -> Self {

@@ -51,7 +51,7 @@ impl<D: DelayNs + Clone, C: RegComms<1, u8>> Icm42670<D, C> {
         }).await?;
         self.p.accel_config1().modify_async(|mut val| {
             val
-                .accel_ui_filt_bw().set(accel_cnf.accel_range.to_bits());
+                .accel_ui_filt_bw().set(accel_cnf.accel_dlpf.to_bits());
             val
         }).await?;
         Ok(())   
@@ -66,7 +66,7 @@ impl<D: DelayNs + Clone, C: RegComms<1, u8>> Icm42670<D, C> {
         }).await?;
         self.p.gyro_config1().modify_async(|mut val| {
             val
-                .gyro_ui_filt_bw().set(gyro_cnf.gyro_range.to_bits());
+                .gyro_ui_filt_bw().set(gyro_cnf.gyro_dlpf.to_bits());
             val
         }).await?;
         Ok(())
