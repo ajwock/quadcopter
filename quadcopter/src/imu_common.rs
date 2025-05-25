@@ -8,7 +8,7 @@ use crate::debug_println;
 pub enum ImuErrorType {
     Unsupported, 
     MissingPacketInfo,
-    CommunicationError,
+//    CommunicationError,
     NotReady,
 }
 
@@ -32,9 +32,9 @@ impl ImuError {
         Self::new(ImuErrorType::MissingPacketInfo)
     }
 
-    pub fn comms_error() -> Self {
+/*    pub fn comms_error() -> Self {
         Self::new(ImuErrorType::CommunicationError)
-    }
+    }*/
 
     pub fn not_ready() -> Self {
         Self::new(ImuErrorType::NotReady)
@@ -81,24 +81,9 @@ impl ImuMsg {
 }
 
 pub trait Imu {
-    // Read the present motion data
-    async fn read_motion_data_raw(&mut self) -> MotionData;
     // Non-blockingly try to recieve a motion data msg
     async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
         Err(ImuError::unsupported())
-    }
-
-    async fn wait_for_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
-        loop {
-            break match self.get_motion_data_msg().await {
-                Ok(m) => Ok(m),
-                Err(e) if e.is_not_ready() => {
-                    embassy_futures::yield_now().await;
-                    continue
-                }
-                Err(e) => Err(e),
-            }
-        }
     }
 
     async fn flush_msgs(&mut self) {
@@ -143,7 +128,6 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
         debug_println!("Calibration data: {:?}, calibration_offsets: {:?}", self.calibration_data, calib_offsets);
         ImuController::new(self.imu_holder.take().unwrap())
             .with_calibration(calib_offsets)
-            .with_gravmag(magnitude)
     }
 
     pub async fn msg_calibration(&mut self) -> Result<ImuController<M>, ImuError> {
@@ -166,22 +150,11 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
             }
         }
     }
-
-    pub async fn calibration_tick(&mut self) -> Option<ImuController<M>> {
-        let imu_ref = self.imu_holder.as_mut().expect("Calibrator has yielded its imu");
-        self.calibration_data.push(imu_ref.read_motion_data_raw().await);
-        if self.calibration_data.len() != self.calibration_data.capacity() {
-            return None
-        } else {
-            Some(self.init_from_calibration_data())
-        }
-    }
 }
 
 pub struct ImuController<M: Imu> {
     pub imu: M,
     pub calibration_offsets: MotionData,
-    pub gravity_magnitude: i16,
 }
 
 impl<M: Imu> ImuController<M> {
@@ -189,7 +162,6 @@ impl<M: Imu> ImuController<M> {
         Self {
             imu,
             calibration_offsets: MotionData::zero(),
-            gravity_magnitude: i16::MAX / 4,
         }
     }
 
@@ -200,23 +172,8 @@ impl<M: Imu> ImuController<M> {
         }
     }
 
-    pub fn with_gravmag(self, gravity_magnitude: i16) -> Self {
-        Self {
-            gravity_magnitude,
-            ..self
-        }
-    }
-
-    pub async fn read_motion_data(&mut self) -> MotionData {
-        self.imu.read_motion_data_raw().await + self.calibration_offsets
-    }
-
     pub async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
         self.imu.get_motion_data_msg().await.map(|x| x.with_calibration_data(self.calibration_offsets))
-    }
-
-    pub fn gravity_mag(&self) -> i16 {
-        self.gravity_magnitude
     }
 
     pub async fn flush_msgs(&mut self) {

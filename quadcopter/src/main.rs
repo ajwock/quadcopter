@@ -4,11 +4,8 @@
 mod imu_common;
 mod motor_drive;
 mod motion_data;
-mod motion_data_angular;
 mod orientation_tracking;
 mod utils;
-mod receiver;
-mod delay_buf;
 mod icm42670_imu;
 
 use motion_data::DegreeFixed32;
@@ -43,7 +40,6 @@ use esp_hal::ledc::{
     channel::ChannelIFace,
 };
 use esp_hal::gpio::{
-    self,
     Output,
     Level,
     OutputConfig,
@@ -58,19 +54,14 @@ use icm42670::{
     AccelRange,
     GyroRange,
 };
-use motion_data::MotionData;
 use embassy_sync::{
     signal::Signal,
-    mutex::Mutex,
-    blocking_mutex::raw::{
-        CriticalSectionRawMutex,
-    },
+    blocking_mutex::raw::CriticalSectionRawMutex,
 };
 use esp_wifi::{
     wifi::{
         AccessPointConfiguration,
         AuthMethod,
-        Configuration,
         WifiController,
         WifiDevice,
         WifiEvent,
@@ -165,15 +156,6 @@ async fn main(spawner: Spawner) {
     )
     .unwrap());
 
-    let wifi_config = esp_wifi::wifi::Configuration::AccessPoint(
-        AccessPointConfiguration {
-            ssid: "esp_quad_wifi".try_into().unwrap(),
-            ssid_hidden: false,
-            auth_method: AuthMethod::WPA2Personal,
-            password: "lol1337".try_into().unwrap(),
-            ..Default::default()
-        }
-    );
     let (controller, interfaces) = esp_wifi::wifi::new(
         &initted,
         peripherals.WIFI,
@@ -199,7 +181,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(manage_ap_connection(controller)).unwrap();
     spawner.spawn(net_task(runner)).unwrap();
     spawner.spawn(run_dhcp(stack, gw_ip_addr_str)).unwrap();
-    spawner.spawn(manage_receiver_connection(stack, gw_ip_addr_str)).unwrap();
+    spawner.spawn(manage_receiver_connection(stack)).unwrap();
 
     loop {
         if stack.is_link_up() {
@@ -290,7 +272,6 @@ async fn main(spawner: Spawner) {
     let mut calibrator = ImuCalibrator::<_, 1024>::new(imu);
     // Tick the calibrator state machine until it's done
     let mut imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
-    let gravmag = imuctl.gravity_mag();
 
     println!("Initializing motor pwms");
     let mut ledc = Ledc::new(peripherals.LEDC);
@@ -332,7 +313,7 @@ async fn main(spawner: Spawner) {
     let backright = temp;*/
     // 1 3
     // 0 2
-    let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright, gravmag);
+    let mut motor_drive = MotorDrive::new(frontleft, frontright, backleft, backright);
     debug_println!("Motor driver set up");
 
     let mut led = Output::new(
@@ -382,7 +363,7 @@ fn xy_tilt_input_xlat(input: i8) -> DegreeFixed32 {
 }
 
 #[embassy_executor::task]
-async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static str) {
+async fn manage_receiver_connection(stack: Stack<'static>) {
     let mut rx_buffer = [0; 2048];
     let mut tx_buffer = [0; 2048];
     debug_println!("Receiver connection management up");
@@ -400,7 +381,6 @@ async fn manage_receiver_connection(stack: Stack<'static>, gw_ip_addr: &'static 
         }
         CONTROLLER_CONNECTED.signal(());
         debug_println!("Got tcp connection");
-        use embedded_io_async::Write;
         let mut buf = [0u8; 4];
         loop {
             match sock.read(&mut buf).await {

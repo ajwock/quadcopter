@@ -1,11 +1,8 @@
 use crate::imu_common::{
     Imu,
-    ImuError,
-    ImuMsg,
     ImuController,
 };
-use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, RadianFixed16, to_unity, DegreeFixed16, DegreeFixed32};
-use az::Cast;
+use crate::motion_data::DegreeFixed32;
 use crate::debug_println;
 use esp_println::println;
 use fixed_macro::fixed;
@@ -18,8 +15,6 @@ pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
     pub fused_orientation: [DegreeFixed32; 3],
     pub accel_tilt: [DegreeFixed32; 2],
-    pub speed: [DegreeFixed32; 3],
-    pub position: [DegreeFixed32; 3],
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
     pub imuctl: ImuController<M>,
@@ -28,11 +23,6 @@ pub struct OrientationTracker<M: Imu> {
 const ACCEL_SCALING_FACTOR: I12F20 = fixed!(0.0011962891: I12F20);
 pub fn reading_to_accel_ms2(reading: i16) -> DegreeFixed32 {
     (reading as i32) * ACCEL_SCALING_FACTOR
-}
-
-const DEGREE_SCALING_FACTOR: I12F20 = fixed!(0.0000061037019: I12F20);
-pub fn reading_to_dps_32(reading: i16) -> DegreeFixed32 {
-    (reading as i32) * DEGREE_SCALING_FACTOR
 }
 
 // Why this?  Saves us a separate muliply or division later on
@@ -51,28 +41,12 @@ pub fn timestamp_diff_to_seconds(timestamp: u16) -> I12F20 {
 
 const FRAC_180_PI: DegreeFixed32 = fixed!(57.29577: I12F20);
 
-const DEGREES_180: DegreeFixed32 = DegreeFixed32::from_bits(188743680);
-const DEGREES_NEG_180: DegreeFixed32 = DegreeFixed32::from_bits(-188743680);
-pub fn degree_wrap(input: DegreeFixed32) -> DegreeFixed32 {
-    if input < DEGREES_NEG_180 {
-        let diff = DEGREES_NEG_180 - input;
-        degree_wrap(DEGREES_180 - diff)
-    } else if input > DEGREES_180 {
-        let diff = input - DEGREES_180;
-        degree_wrap(DEGREES_NEG_180 + diff)
-    } else {
-        input
-    }
-}
-
 impl<M: Imu> OrientationTracker<M> {
     pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
             fused_orientation: [DegreeFixed32::from_bits(0); 3],
             accel_tilt: Default::default(),
-            speed: [DegreeFixed32::from_bits(0); 3],
-            position: [DegreeFixed32::from_bits(0); 3],
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
             imuctl,
@@ -81,11 +55,6 @@ impl<M: Imu> OrientationTracker<M> {
 
     pub fn get_orientation(&self) -> [DegreeFixed32; 3] {
         self.orientation
-    }
-
-    pub fn att_accel(z_accel: DegreeFixed32, proj_accel: DegreeFixed32) -> DegreeFixed32 {
-//        atan2(z_accel, proj_accel)) * FRAC_180_PI
-        todo!()
     }
 
     const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(0.996: I12F20);

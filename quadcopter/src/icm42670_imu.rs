@@ -1,14 +1,13 @@
 use crate::imu_common::{Imu, ImuMsg, ImuError};
-use crate::motion_data::MotionData;
 use icm42670::Icm42670;
 use embedded_hal_async::delay::DelayNs;
-use regcomms::{RegComms, RegCommsError};
+use regcomms::RegComms;
 
 #[derive(Copy, Clone, Debug)]
 pub struct FifoPacket {
     pub accel_data: Option<[i16; 3]>,
     pub gyro_data:  Option<[i16; 3]>,
-    pub temp_data:  u16,
+    pub _temp_data:  u16,
     pub timestamp:  Option<u16>,
 }
 
@@ -44,15 +43,15 @@ impl FifoPacketHeader {
     fn has_20bit_ext(&self) -> bool {
         (self.0 & (1 << 4)) != 0
     }
-
+/*
     fn has_odr_timestamp(&self) -> bool {
         ((self.0 >> 2) & 0b11) == 0b10
-    }
+    }*/
 
     fn has_timestamp(&self) -> bool {
         (self.0 & (1 << 3)) != 0
     }
-
+/*
     fn accel_new(&self) -> bool {
         (self.0 & (1 << 1)) != 0
     }
@@ -67,32 +66,14 @@ impl FifoPacketHeader {
         size += self.has_20bit_ext().then_some(4).unwrap_or(0);
         size += self.has_timestamp().then_some(2).unwrap_or(0);
         size
-    }
+    }*/
 }
 
 impl<D: DelayNs, C: RegComms<1, u8>> Imu for Icm42670<D, C> {
-    async fn read_motion_data_raw(&mut self) -> MotionData {
-        let acc_x = self.p.accel_data_x().read().unwrap().get() as i16;
-        let acc_y = self.p.accel_data_y().read().unwrap().get() as i16;
-        let acc_z = self.p.accel_data_z().read().unwrap().get() as i16;
-        let gyr_x = self.p.gyro_data_x().read().unwrap().get() as i16;
-        let gyr_y = self.p.gyro_data_y().read().unwrap().get() as i16;
-        let gyr_z = self.p.gyro_data_z().read().unwrap().get() as i16;
-        MotionData {
-            acc_x,
-            acc_y,
-            acc_z,
-            gyr_x,
-            gyr_y,
-            gyr_z
-        }
-    }
-
     async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
         let mut buf = [0u8; 16];
         let portion = &mut buf;
         let _ = self.p.fifo_data().data_port_read_async(portion).await;
-//        esp_println::println!("fifo buf: {:?}", portion);
         let header_data = portion[0];
         // Fifo empty
         if header_data == 0xFF {
@@ -125,7 +106,7 @@ impl<D: DelayNs, C: RegComms<1, u8>> Imu for Icm42670<D, C> {
             None
         };
         let (&mut temp_hbits, mut portion) = portion.split_first_mut().unwrap();
-        let temp_data = if header.has_20bit_ext() {
+        let _temp_data = if header.has_20bit_ext() {
             let (&mut temp_lbits, remainder) = portion.split_first_mut().unwrap();
             portion = remainder;
             u16::from_be_bytes([temp_hbits, temp_lbits])
@@ -138,6 +119,6 @@ impl<D: DelayNs, C: RegComms<1, u8>> Imu for Icm42670<D, C> {
         } else {
             None
         };
-        FifoPacket { accel_data, gyro_data, temp_data, timestamp }.try_into()
+        FifoPacket { accel_data, gyro_data, _temp_data, timestamp }.try_into()
     }
 }

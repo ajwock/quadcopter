@@ -1,17 +1,15 @@
-use esp_hal::ledc;
 use esp_hal::ledc::{
+    self,
     channel::{Channel, ChannelIFace},
 };
 use crate::debug_println;
 use esp_println::println;
-use crate::motion_data::{MotionData, FixedMotionData, UnityFixed16, TiltData, RadianFixed16, to_unity, DegreeFixed32};
+use crate::motion_data::DegreeFixed32;
 use fixed::FixedI16;
 use fixed::types::extra::U8;
 use fixed_macro::fixed;
-use fixed_trigonometry::powi;
 use az::Cast;
 use crate::utils;
-use crate::delay_buf::DelayBuf;
 
 type MotorChannel = Channel<'static, ledc::LowSpeed>;
 // whoops sorry I guess
@@ -35,19 +33,16 @@ pub(crate) struct MotorDrive {
     motor_targets: [[u8; 2]; 2],
     current_drive: [[u8; 2]; 2],
     attitude_int: [DegreeFixed32; 3],
-    gravity_magnitude: RadianFixed16,
     collective_power: DegreeFixed32,
     collective_target: DegreeFixed32,
     target_tilt: [DegreeFixed32; 3],
     target_tilt_target: [DegreeFixed32; 3],
     // For orientation-based derivative factor
     previous_orientation: [DegreeFixed32; 3],
-    previous_acc_error: [UnityFixed16; 3],
-    integrated_acc_error: [UnityFixed16; 3],
 }
 
 impl MotorDrive {
-    pub(crate) fn new(topleft: MotorChannel, topright: MotorChannel, bottomleft: MotorChannel, bottomright: MotorChannel, gravity_magnitude: i16) -> Self {
+    pub(crate) fn new(topleft: MotorChannel, topright: MotorChannel, bottomleft: MotorChannel, bottomright: MotorChannel) -> Self {
         Self {
             motors: [[Motor::new(topleft), Motor::new(topright)], [Motor::new(bottomleft), Motor::new(bottomright)]],
             motor_targets: [[0; 2]; 2],
@@ -58,9 +53,6 @@ impl MotorDrive {
             target_tilt: Default::default(),
             target_tilt_target: Default::default(),
             previous_orientation: Default::default(),
-            previous_acc_error: Default::default(),
-            integrated_acc_error: Default::default(),
-            gravity_magnitude: RadianFixed16::from_bits(gravity_magnitude),
         }
     }
 
@@ -97,9 +89,6 @@ impl MotorDrive {
     }
 
     pub(crate) fn set_collective_pct(&mut self, pct: u8) {
-        const MAX_INPUT: u32 = 100;
-        const MAX_OUTPUT: u32 = i16::MAX as u32;
-        const RATIO: u32 = MAX_OUTPUT / MAX_INPUT;
         let pct_clamped = core::cmp::min(pct, 100);
         self.collective_target = DegreeFixed32::from_num(pct_clamped) / 100;
         debug_println!("Setting collective: {}", self.collective_target);
@@ -122,9 +111,6 @@ impl MotorDrive {
     const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
     const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(5: I12F20);
     const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
-    pub(crate) fn attitude_correct_2(&mut self, ) {
-        
-    }
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
         if data[0].abs() > 45 || data[1].abs() > 45 {
