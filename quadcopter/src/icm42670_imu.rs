@@ -73,7 +73,9 @@ impl<D: DelayNs, C: RegComms<1, u8>> Imu for Icm42670<D, C> {
     async fn get_motion_data_msg(&mut self) -> Result<ImuMsg, ImuError> {
         let mut buf = [0u8; 16];
         let portion = &mut buf;
-        let _ = self.p.fifo_data().data_port_read_async(portion).await;
+        if let Err(_) = self.p.fifo_data().data_port_read_async(portion).await {
+            return Err(ImuError::comms_error())
+        }
         let header_data = portion[0];
         // Fifo empty
         if header_data == 0xFF {

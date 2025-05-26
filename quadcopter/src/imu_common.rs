@@ -8,7 +8,7 @@ use crate::debug_println;
 pub enum ImuErrorType {
     Unsupported, 
     MissingPacketInfo,
-//    CommunicationError,
+    CommunicationError,
     NotReady,
 }
 
@@ -32,9 +32,9 @@ impl ImuError {
         Self::new(ImuErrorType::MissingPacketInfo)
     }
 
-/*    pub fn comms_error() -> Self {
+    pub fn comms_error() -> Self {
         Self::new(ImuErrorType::CommunicationError)
-    }*/
+    }
 
     pub fn not_ready() -> Self {
         Self::new(ImuErrorType::NotReady)
