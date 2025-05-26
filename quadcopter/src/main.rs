@@ -6,7 +6,7 @@ mod motor_drive;
 mod motion_data;
 mod orientation_tracking;
 mod utils;
-mod icm42670_imu;
+mod icm42670;
 
 use motion_data::DegreeFixed32;
 use fixed_macro::fixed;
@@ -241,20 +241,12 @@ async fn main(spawner: Spawner) {
         }),
         fifo_config: Some(Default::default()),
     };
-    let comms = i2c;
-    let i2c_comms = I2cCommsAsync::new(comms)
-        .with_address(0b1101000);
-    let mut imu = Icm42670::new(i2c_comms, embassy_time::Delay); 
+    let mut imu = Icm42670::new(i2c); 
     let mut ticker = Ticker::every(Duration::from_millis(10));
     //println!("Powering on");
     println!("Configuring");
-    imu.configure(config).await.unwrap();
-    use regcomms::RegCommsAccessProc;
-    let standard = imu.p.standard;
-    // Manually write Hz16 config
-    standard.proc_write_async(&mut imu.p, 0x24, &[0b111]).await.unwrap();
-    println!("Configured");
-    imu.enable().await.unwrap();
+    imu.configure2(config).await.unwrap();
+    imu.full_enable().await;
  
     for i in 0..100 {
         let mut good_packets = 0;
