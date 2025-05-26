@@ -7,6 +7,7 @@ mod motion_data;
 mod orientation_tracking;
 mod utils;
 mod icm42670;
+mod icm42670_imu;
 
 use motion_data::DegreeFixed32;
 use fixed_macro::fixed;

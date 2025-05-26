@@ -75,8 +75,6 @@ impl MotorDrive {
         for i in 0..3 {
             self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(1.2: I12F20));
         }
-        println!("target_tilt: {:?}", self.target_tilt);
-        //self.target_tilt = self.target_tilt_target;
     }
 
     pub(crate) fn cut_motors(&mut self) {
