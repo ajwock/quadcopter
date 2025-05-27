@@ -73,7 +73,7 @@ impl MotorDrive {
             }
         }
         for i in 0..3 {
-            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(1.2: I12F20));
+            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(3.6: I12F20));
         }
         println!("target_tilt: {:?}", self.target_tilt);
         //self.target_tilt = self.target_tilt_target;
@@ -107,11 +107,11 @@ impl MotorDrive {
     const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.75: I12F20);
     const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
-    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.1: I12F20);
+    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.5: I12F20);
     const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
-    const ROTATION_INTEGRAL: DegreeFixed32 = fixed!(0.1: I12F20);
+    const ROTATION_INTEGRAL: DegreeFixed32 = fixed!(0.0: I12F20);
     const ROTATION_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.05: I12F20);
-    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(1: I12F20);
+    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(0.5: I12F20);
     const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
     const TICKS_PER_SECOND: i32 = 100;
