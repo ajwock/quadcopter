@@ -99,12 +99,12 @@ impl MotorDrive {
     }
 
     // PID constants.
-    const ATTITUDE_POSITION: DegreeFixed32 = fixed!(0.3: I12F20); // fixed!(0.5: I12F20);
+    const ATTITUDE_POSITION: DegreeFixed32 = fixed!(0.6: I12F20); // fixed!(0.5: I12F20);
     const ATTITUDE_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
-    const ATTITUDE_INTEGRAL: DegreeFixed32 = fixed!(0.15: I12F20);
+    const ATTITUDE_INTEGRAL: DegreeFixed32 = fixed!(0.04: I12F20);
     const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = fixed!(0.05: I12F20);
     const ATTITUDE_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
-    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.75: I12F20);
+    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.5: I12F20);
     const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
     const ROTATION_POSITION: DegreeFixed32 = fixed!(0.5: I12F20);
