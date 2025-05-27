@@ -46,7 +46,7 @@ use esp_hal::gpio::{
     OutputConfig,
 };
 use static_cell::StaticCell;
-use my_icm42670::{
+use icm42670::{
     Icm42670,
     DLPF,
     ODR,
@@ -229,7 +229,7 @@ async fn main(spawner: Spawner) {
     let mut d = embassy_time::Delay;
     d.delay_us(200).await;
 
-    let config = my_icm42670::Config {
+    let config = icm42670::Config {
         accel_config: Some(AccelConfig {
             accel_range: AccelRange::G4,
             accel_odr:   ODR::Hz1600,
@@ -242,15 +242,16 @@ async fn main(spawner: Spawner) {
         }),
         fifo_config: Some(Default::default()),
     };
-    let mut imu = Icm42670::new(i2c); 
+    //let mut imu = Icm42670::new(i2c); 
+    let comms = regcomms::i2c::I2cCommsAsync::new(i2c).with_address(0b1101000);
+    let mut imu = icm42670::Icm42670::new(comms, embassy_time::Delay);
     let mut ticker = Ticker::every(Duration::from_millis(10));
     //println!("Powering on");
     println!("Configuring");
-    imu.configure2(config).await.unwrap();
-    imu.full_enable().await;
-    let i2c = imu.comm;
-    let comms = regcomms::i2c::I2cCommsAsync::new(i2c).with_address(0b1101000);
-    let mut imu = icm42670::Icm42670::new(comms, embassy_time::Delay);
+    imu.configure(config).await.unwrap();
+    imu.enable().await.unwrap();
+    let i2c = imu.p.comms.comms;
+    let mut imu = my_icm42670::Icm42670::new(i2c);
  
     for i in 0..100 {
         let mut good_packets = 0;
