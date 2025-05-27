@@ -73,7 +73,7 @@ impl MotorDrive {
             }
         }
         for i in 0..3 {
-            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(1: I12F20));
+            self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(0.5: I12F20));
         }
         println!("target_tilt: {:?}", self.target_tilt);
         //self.target_tilt = self.target_tilt_target;
@@ -99,12 +99,12 @@ impl MotorDrive {
     }
 
     // PID constants.
-    const ATTITUDE_POSITION: DegreeFixed32 = fixed!(0.9: I12F20); // fixed!(0.5: I12F20);
-    const ATTITUDE_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
-    const ATTITUDE_INTEGRAL: DegreeFixed32 = fixed!(0.02: I12F20);
+    const ATTITUDE_POSITION: DegreeFixed32 = fixed!(1.1: I12F20); // fixed!(0.5: I12F20);
+    const ATTITUDE_POSITION_CLAMP: DegreeFixed32 = fixed!(0.05: I12F20);
+    const ATTITUDE_INTEGRAL: DegreeFixed32 = fixed!(0.01: I12F20);
     const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = fixed!(0.05: I12F20);
     const ATTITUDE_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
-    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.45: I12F20);
+    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.65: I12F20);
     const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
     const ROTATION_POSITION: DegreeFixed32 = fixed!(0.5: I12F20);

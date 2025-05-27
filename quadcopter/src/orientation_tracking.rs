@@ -73,7 +73,7 @@ impl<M: Imu> OrientationTracker<M> {
         self.orientation
     }
 
-    const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(0.999: I12F20);
+    const COMPLEMENTARY_ALPHA: DegreeFixed32 = fixed!(0.995: I12F20);
     pub fn complementary_filter(gyro_degrees: I12F20, accel_degrees: I12F20) -> I12F20 {
         Self::COMPLEMENTARY_ALPHA * gyro_degrees + (I12F20::ONE - Self::COMPLEMENTARY_ALPHA) * accel_degrees
     }
