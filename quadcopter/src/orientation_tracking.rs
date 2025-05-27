@@ -14,7 +14,7 @@ use fixed::types::I12F20;
 pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
     pub fused_orientation: [DegreeFixed32; 3],
-    pub accel_tilt: [DegreeFixed32; 2],
+    pub last_accel_vec: [i16; 3],
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
     pub imuctl: ImuController<M>,
@@ -55,7 +55,7 @@ impl<M: Imu> OrientationTracker<M> {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
             fused_orientation: [DegreeFixed32::from_bits(0); 3],
-            accel_tilt: Default::default(),
+            last_accel_vec: Default::default(),
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
             imuctl,
@@ -97,8 +97,7 @@ impl<M: Imu> OrientationTracker<M> {
             let timestamp = msg.timestamp;
             let accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
-
-            self.accel_tilt = raw_accel_to_tilt(accel_data);
+            self.last_accel_vec = accel_data;
 /*            if gyro_data[0] as u16 == 0xffff || gyro_data[1] as u16 == 0xffff || gyro_data[2] as u16 == 0xffff {
                 panic!("Got erronious gyro data value");
             }*/
@@ -130,8 +129,9 @@ impl<M: Imu> OrientationTracker<M> {
             }
             self.last_gyro_timestamp = timestamp;
         }
-        self.fused_orientation[0] = Self::complementary_filter(self.fused_orientation[0], self.accel_tilt[0]);
-        self.fused_orientation[1] = Self::complementary_filter(self.fused_orientation[1], self.accel_tilt[1]);
+        let accel_tilt = raw_accel_to_tilt(self.last_accel_vec);
+        self.fused_orientation[0] = Self::complementary_filter(self.fused_orientation[0], accel_tilt[0]);
+        self.fused_orientation[1] = Self::complementary_filter(self.fused_orientation[1], accel_tilt[1]);
         self.orientation = self.fused_orientation;
     }
 }
