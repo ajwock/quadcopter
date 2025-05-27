@@ -98,9 +98,6 @@ impl<M: Imu> OrientationTracker<M> {
             let accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
             self.last_accel_vec = accel_data;
-/*            if gyro_data[0] as u16 == 0xffff || gyro_data[1] as u16 == 0xffff || gyro_data[2] as u16 == 0xffff {
-                panic!("Got erronious gyro data value");
-            }*/
             let timestamp_diff = if timestamp < self.last_gyro_timestamp {
                 u16::MAX - self.last_gyro_timestamp + timestamp
             } else {
