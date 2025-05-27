@@ -107,11 +107,11 @@ impl MotorDrive {
     const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.75: I12F20);
     const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
-    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.3: I12F20);
+    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.1: I12F20);
     const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
-    const ROTATION_INTEGRAL: DegreeFixed32 = fixed!(0.01: I12F20);
+    const ROTATION_INTEGRAL: DegreeFixed32 = fixed!(0.1: I12F20);
     const ROTATION_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.05: I12F20);
-    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(2: I12F20);
+    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(1: I12F20);
     const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
     const TICKS_PER_SECOND: i32 = 100;
