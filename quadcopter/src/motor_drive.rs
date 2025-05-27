@@ -132,14 +132,16 @@ impl MotorDrive {
                 // Attitude integral error handling
         // Avoid changing integral while not trying to hover
 //        if target_tilt_mapped[0] == DegreeFixed32::ZERO && target_tilt_mapped[1] == DegreeFixed32::ZERO {
-          self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK);
+          let collective_scale = self.collective_power / fixed!(0.75: I12F20);
+          self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK * collective_scale);
  //       }
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
         let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
         self.previous_orientation = tilt_v;
+        // Scale correction to the collective
 
-        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION).clamp(-Self::ATTITUDE_POSITION_CLAMP, Self::ATTITUDE_POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::ATTITUDE_INTEGRAL_CLAMP, Self::ATTITUDE_INTEGRAL_CLAMP) + (derivative[i] * Self::ATTITUDE_DERIVATIVE).clamp(-Self::ATTITUDE_DERIVATIVE_CLAMP, Self::ATTITUDE_DERIVATIVE_CLAMP));
+        let adj_fn: [_; 3]  = core::array::from_fn(|i| (err_v[i] * Self::ATTITUDE_POSITION * collective_scale).clamp(-Self::ATTITUDE_POSITION_CLAMP, Self::ATTITUDE_POSITION_CLAMP) + (self.attitude_int[i] * Self::ATTITUDE_INTEGRAL).clamp(-Self::ATTITUDE_INTEGRAL_CLAMP, Self::ATTITUDE_INTEGRAL_CLAMP) + (derivative[i] * Self::ATTITUDE_DERIVATIVE * collective_scale).clamp(-Self::ATTITUDE_DERIVATIVE_CLAMP, Self::ATTITUDE_DERIVATIVE_CLAMP));
 
         // Frontleft is in the -x, +y region
         motor_adjustments[0][0] = motor_adjustments[0][0].saturating_add(adj_fn[0]).saturating_sub(adj_fn[1]);
