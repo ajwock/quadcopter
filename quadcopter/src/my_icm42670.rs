@@ -19,7 +19,7 @@ use esp_hal::i2c;
 pub const ACCEL_ADDRESS: u8 = 0b1101000;
 
 pub struct Icm42670<'a> {
-    comm: I2c<'a, Async>,
+    pub comm: I2c<'a, Async>,
     pub calibration_offsets: MotionData,
     pub prev_motion_data: MotionData,
 }
