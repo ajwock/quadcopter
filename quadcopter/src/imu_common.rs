@@ -1,4 +1,6 @@
 use crate::motion_data::MotionData;
+use fixed::types::I12F20;
+use crate::orientation_tracking::raw_accel_to_tilt;
 use smallvec::SmallVec;
 use esp_println::println;
 use embassy_futures;
@@ -96,6 +98,7 @@ pub trait Imu {
 pub struct ImuCalibrator<M: Imu, const N: usize> {
     imu_holder: Option<M>,
     calibration_data: SmallVec<[MotionData; N]>,
+    initial_tilt: Option<[I12F20; 2]>,
 }
 
 impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
@@ -103,6 +106,7 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
         Self {
             imu_holder: Some(imu),
             calibration_data: SmallVec::new(),
+            initial_tilt: None,
         }
     }
 
@@ -116,16 +120,15 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
         let magnitude = raw_offsets.acc_magnitude();
         let mut gravity_vector = MotionData::zero();
         gravity_vector.acc_z = magnitude;
-        let calib_offsets = gravity_vector - raw_offsets;
+        let mut calib_offsets = gravity_vector - raw_offsets;
         debug_println!("Gravity vector: {:?}", gravity_vector);
         debug_println!("raw_offsets: {:?}", raw_offsets);
         debug_println!("calib_offsets: {:?}", calib_offsets);
-        let calib_acc_magnitude = calib_offsets.acc_magnitude();
-        if calib_acc_magnitude > 1000 {
-            panic!("Calibration failed- offset magnitude {} > 1000.  Ensure the device is on a level surface", calib_acc_magnitude);
-        }
-        debug_println!("Note: Calibration offset magnitude: {}", calib_acc_magnitude);
-        debug_println!("Calibration data: {:?}, calibration_offsets: {:?}", self.calibration_data, calib_offsets);
+        // Actually, ignore accel bias and use it to determine initial orientation
+        calib_offsets.acc_x = 0;
+        calib_offsets.acc_y = 0;
+        calib_offsets.acc_z = 0;
+        self.initial_tilt = Some(raw_accel_to_tilt([raw_offsets.acc_x, raw_offsets.acc_y, raw_offsets.acc_z]));
         ImuController::new(self.imu_holder.take().unwrap())
             .with_calibration(calib_offsets)
     }
@@ -149,6 +152,10 @@ impl<M: Imu, const N: usize> ImuCalibrator<M, N> {
                 return Ok(self.init_from_calibration_data())
             }
         }
+    }
+
+    pub fn get_initial_tilt(&self) -> Option<[I12F20; 2]> {
+        self.initial_tilt.clone()
     }
 }
 

@@ -272,6 +272,7 @@ async fn main(spawner: Spawner) {
     let mut calibrator = ImuCalibrator::<_, 1024>::new(imu);
     // Tick the calibrator state machine until it's done
     let mut imuctl = calibrator.msg_calibration().await.expect("Calibration failed");
+    let initial_tilt = calibrator.get_initial_tilt().unwrap();
 
     println!("Initializing motor pwms");
     let mut ledc = Ledc::new(peripherals.LEDC);
@@ -324,7 +325,8 @@ async fn main(spawner: Spawner) {
 
     let _ = spawner;
     imuctl.flush_msgs().await;
-    let mut orientation_tracker = OrientationTracker::new(imuctl);
+    let mut orientation_tracker = OrientationTracker::new(imuctl)
+        .with_initial_tilt(initial_tilt);
     let mut led_tick_reducer = 0;
     println!("Starting main loop");
     loop {

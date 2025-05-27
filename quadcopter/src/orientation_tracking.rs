@@ -41,6 +41,15 @@ pub fn timestamp_diff_to_seconds(timestamp: u16) -> I12F20 {
 
 const FRAC_180_PI: DegreeFixed32 = fixed!(57.29577: I12F20);
 
+pub fn raw_accel_to_tilt(accel_data: [i16; 3]) -> [I12F20; 2] {
+    let [acc_x, acc_y, acc_z] = accel_data.map(|elt| reading_to_accel_ms2(elt) * fixed!(0.1: I12F20));
+    // Oh... I'm now aware of so much wrong I've been doing to myself...
+    // Maybe I need to explicitly use the terms pitch and roll.  TODO
+    let att_acc_y = atan2(-acc_x, (acc_y*acc_y + acc_z*acc_z).sqrt()) * FRAC_180_PI;
+    let att_acc_x = atan2(acc_y, (acc_x*acc_x + acc_z*acc_z).sqrt()) * FRAC_180_PI;
+    [att_acc_x, att_acc_y]
+}
+
 impl<M: Imu> OrientationTracker<M> {
     pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
@@ -50,6 +59,13 @@ impl<M: Imu> OrientationTracker<M> {
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
             imuctl,
+        }
+    }
+    
+    pub fn with_initial_tilt(self, initial_tilt: [DegreeFixed32; 2]) -> Self {
+        Self {
+            orientation: [initial_tilt[0], initial_tilt[1], DegreeFixed32::from_bits(0)],
+            ..self
         }
     }
 
@@ -82,15 +98,7 @@ impl<M: Imu> OrientationTracker<M> {
             let accel_data = msg.accel_data;
             let gyro_data = msg.gyro_data;
 
-            let [acc_x, acc_y, acc_z] = accel_data.map(|elt| reading_to_accel_ms2(elt) * fixed!(0.1: I12F20));
-            // Oh... I'm now aware of so much wrong I've been doing to myself...
-            // Maybe I need to explicitly use the terms pitch and roll.  TODO
-            //
-            let att_acc_y = atan2(-acc_x, (acc_y*acc_y + acc_z*acc_z).sqrt()) * FRAC_180_PI;
-            //let att_acc_y = -Self::att_accel(acc_z, acc_x);
-            let att_acc_x = atan2(acc_y, (acc_x*acc_x + acc_z*acc_z).sqrt()) * FRAC_180_PI;
-//            let att_acc_x = Self::att_accel(acc_z, acc_y);
-            self.accel_tilt = [att_acc_x, att_acc_y];
+            self.accel_tilt = raw_accel_to_tilt(accel_data);
 /*            if gyro_data[0] as u16 == 0xffff || gyro_data[1] as u16 == 0xffff || gyro_data[2] as u16 == 0xffff {
                 panic!("Got erronious gyro data value");
             }*/
