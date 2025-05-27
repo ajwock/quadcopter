@@ -111,6 +111,8 @@ impl MotorDrive {
     const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
     const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(5: I12F20);
     const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
+
+    const TICKS_PER_SECOND: i32 = 100;
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
         if data[0].abs() > 45 || data[1].abs() > 45 {
@@ -137,7 +139,7 @@ impl MotorDrive {
  //       }
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
-        let derivative: [_; 3] = core::array::from_fn(|i| 100 * (self.previous_orientation[i] - tilt_v[i]));
+        let derivative: [_; 3] = core::array::from_fn(|i| Self::TICKS_PER_SECOND * (self.previous_orientation[i] - tilt_v[i]));
         self.previous_orientation = tilt_v;
         // Scale correction to the collective
 

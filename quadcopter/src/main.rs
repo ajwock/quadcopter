@@ -33,7 +33,6 @@ use esp_hal::spi::{
     self,
     Mode,
 };
-
 use esp_hal::ledc::{
     self,
     Ledc,
@@ -225,7 +224,7 @@ async fn main(spawner: Spawner) {
     };
     let comms = spi_regcomms::SpiComms::new(spi);
     let mut imu = Icm42670::new(comms, embassy_time::Delay); 
-    let mut ticker = Ticker::every(Duration::from_millis(10));
+    let mut ticker = Ticker::every(Duration::from_millis(8));
     //println!("Powering on");
     println!("Configuring");
     imu.configure(config).await.unwrap();
