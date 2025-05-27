@@ -13,7 +13,6 @@ use fixed::types::I12F20;
 // orientation, speed, and position.
 pub struct OrientationTracker<M: Imu> {
     pub orientation: [DegreeFixed32; 3],
-    pub fused_orientation: [DegreeFixed32; 3],
     pub last_accel_vec: [i16; 3],
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
@@ -54,12 +53,15 @@ impl<M: Imu> OrientationTracker<M> {
     pub fn new(imuctl: ImuController<M>) -> Self {
         Self {
             orientation: [DegreeFixed32::from_bits(0); 3],
-            fused_orientation: [DegreeFixed32::from_bits(0); 3],
             last_accel_vec: Default::default(),
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
             imuctl,
         }
+    }
+
+    pub fn move_z_zero(&mut self, tick_rotation: DegreeFixed32) {
+        self.orientation[2] -= tick_rotation;
     }
     
     pub fn with_initial_tilt(self, initial_tilt: [DegreeFixed32; 2]) -> Self {
@@ -121,14 +123,12 @@ impl<M: Imu> OrientationTracker<M> {
                 let delta_orientation = avg_derivative * time_step;
                 debug_println!("avg_derivative[{i}]: {avg_derivative}, delta orientation[{i}]: {delta_orientation}, last_gyro_data_halved[{i}]: {}", self.last_gyro_data_halved[i]);
                 self.orientation[i] = self.orientation[i] + delta_orientation;
-                self.fused_orientation[i] = self.fused_orientation[i] + delta_orientation;
                 self.last_gyro_data_halved[i] = new_halved_reading;
             }
             self.last_gyro_timestamp = timestamp;
         }
         let accel_tilt = raw_accel_to_tilt(self.last_accel_vec);
-        self.fused_orientation[0] = Self::complementary_filter(self.fused_orientation[0], accel_tilt[0]);
-        self.fused_orientation[1] = Self::complementary_filter(self.fused_orientation[1], accel_tilt[1]);
-        self.orientation = self.fused_orientation;
+        self.orientation[0] = Self::complementary_filter(self.orientation[0], accel_tilt[0]);
+        self.orientation[1] = Self::complementary_filter(self.orientation[1], accel_tilt[1]);
     }
 }

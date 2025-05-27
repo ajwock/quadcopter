@@ -98,6 +98,11 @@ impl MotorDrive {
         self.target_tilt_target = target_tilt;
     }
 
+    // We move the sense of '0' for rotation, rather than setting a new target rotation
+    pub(crate) fn move_z_zero(&mut self, _target_rot_diff: DegreeFixed32) {
+        // Just in case I need to adjust internal state for this in the future
+    }
+
     // PID constants.
     const ATTITUDE_POSITION: DegreeFixed32 = fixed!(1.1: I12F20); // fixed!(0.5: I12F20);
     const ATTITUDE_POSITION_CLAMP: DegreeFixed32 = fixed!(0.05: I12F20);

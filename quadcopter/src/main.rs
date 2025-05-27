@@ -321,17 +321,20 @@ async fn main(spawner: Spawner) {
             panic!("Controller disconnected");
         }
         orientation_tracker.track().await;
-        let orientation = orientation_tracker.get_orientation();
-        println!("Orientation: {:?}", orientation);
-        CURRENT_X.store(orientation[0].to_bits(), Ordering::Relaxed);
-        CURRENT_Y.store(orientation[1].to_bits(), Ordering::Relaxed);
-        CURRENT_Z.store(orientation[2].to_bits(), Ordering::Relaxed);
         let control_vals = CONTROLS.get_vals();
         motor_drive.set_collective_pct(control_vals.collective);
         let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];
         debug_println!("Target tilt: {:?}", tilt_ctrl);
         motor_drive.set_target_tilt(tilt_ctrl);
         debug_println!("Collective: {}", control_vals.collective);
+        let rot_ctrl = rot_input_xlat(control_vals.rot_z);
+        motor_drive.move_z_zero(rot_ctrl);
+        orientation_tracker.move_z_zero(rot_ctrl);
+        let orientation = orientation_tracker.get_orientation();
+        println!("Orientation: {:?}", orientation);
+        CURRENT_X.store(orientation[0].to_bits(), Ordering::Relaxed);
+        CURRENT_Y.store(orientation[1].to_bits(), Ordering::Relaxed);
+        CURRENT_Z.store(orientation[2].to_bits(), Ordering::Relaxed);
         motor_drive.attitude_correct(orientation);
         motor_drive.motor_tick();
         ticker.next().await;
@@ -341,4 +344,9 @@ async fn main(spawner: Spawner) {
 const TILT_SCALE: DegreeFixed32 = fixed!(0.2: I12F20);
 fn xy_tilt_input_xlat(input: i8) -> DegreeFixed32 {
     TILT_SCALE * (input as i32)
+}
+
+const ROT_SCALE: DegreeFixed32 = fixed!(0.1: I12F20);
+fn rot_input_xlat(input: i8) -> DegreeFixed32 {
+    ROT_SCALE * (input as i32)
 }
