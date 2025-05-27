@@ -107,10 +107,12 @@ impl MotorDrive {
     const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.75: I12F20);
     const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
-    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.25: I12F20);
-    const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
-    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(0.5: I12F20);
-    const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.1: I12F20);
+    const ROTATION_POSITION: DegreeFixed32 = fixed!(0.3: I12F20);
+    const ROTATION_POSITION_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
+    const ROTATION_INTEGRAL: DegreeFixed32 = fixed!(0.01: I12F20);
+    const ROTATION_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.05: I12F20);
+    const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(2: I12F20);
+    const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
     const TICKS_PER_SECOND: i32 = 100;
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
@@ -129,14 +131,8 @@ impl MotorDrive {
         let err_v: [_; 3] = core::array::from_fn(|i| target_tilt_mapped[i] - tilt_v[i]);
         debug_println!("Orientation error: {:?}", err_v);
         let mut motor_adjustments = [[DegreeFixed32::from_num(0); 2]; 2];
-        // Motors get power added if craft is tilting towards either of the 4 rectangular edges
-        // that the motor sits at the corner to.
-                // Attitude integral error handling
-        // Avoid changing integral while not trying to hover
-//        if target_tilt_mapped[0] == DegreeFixed32::ZERO && target_tilt_mapped[1] == DegreeFixed32::ZERO {
           let collective_scale = self.collective_power / fixed!(0.75: I12F20);
           self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK * collective_scale);
- //       }
         debug_println!("Attitude integral: {:?}", self.attitude_int);
 
         let derivative: [_; 3] = core::array::from_fn(|i| Self::TICKS_PER_SECOND * (self.previous_orientation[i] - tilt_v[i]));
@@ -154,8 +150,9 @@ impl MotorDrive {
         // Handle gyro adjustments.  Only concerned with rotation about z right now as attitude
         // corrections should handle xy rotation
         let rotation_error = err_v[2];
-        let rotation_derivative = -tilt_v[2];
-        let rot_fn = (rotation_error * Self::ROTATION_POSITION).clamp(-Self::ROTATION_POSITION_CLAMP, Self::ROTATION_POSITION_CLAMP) + (rotation_derivative * Self::ROTATION_DERIVATIVE).clamp(-Self::ROTATION_DERIVATIVE_CLAMP, Self::ROTATION_DERIVATIVE_CLAMP);
+        let rotation_int = self.attitude_int[2];
+        let rotation_derivative = derivative[2];
+        let rot_fn = (rotation_error * Self::ROTATION_POSITION * collective_scale).clamp(-Self::ROTATION_POSITION_CLAMP, Self::ROTATION_POSITION_CLAMP) + (rotation_int * Self::ROTATION_INTEGRAL).clamp(-Self::ROTATION_INTEGRAL_CLAMP, Self::ROTATION_INTEGRAL_CLAMP) + (rotation_derivative * Self::ROTATION_DERIVATIVE * collective_scale).clamp(-Self::ROTATION_DERIVATIVE_CLAMP, Self::ROTATION_DERIVATIVE_CLAMP);
         // Opposite motors have propellers rotating in opposite directions.
         // The rotation error is added to or subtracted from opposite propellers to create torque
         // in one direction about the z axis without significantly influencing attitude.
