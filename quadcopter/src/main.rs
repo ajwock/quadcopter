@@ -7,6 +7,7 @@ mod motion_data;
 mod orientation_tracking;
 mod utils;
 mod icm42670_imu;
+mod spi_regcomms;
 
 use motion_data::DegreeFixed32;
 use fixed_macro::fixed;
@@ -31,7 +32,11 @@ use esp_hal::clock::CpuClock;
 use esp_hal::timer::systimer::SystemTimer;
 use esp_hal::time::Rate;
 use esp_hal::timer::timg::TimerGroup;
-use esp_hal::i2c;
+use esp_hal::spi::{
+    self,
+    Mode,
+};
+
 use esp_hal::ledc::{
     self,
     Ledc,
@@ -71,7 +76,6 @@ use esp_wifi::{
 };
 use motor_drive::MotorDrive;
 use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU8, AtomicI32};
-use regcomms::i2c::I2cCommsAsync;
 
 use imu_common::{Imu, ImuCalibrator};
 
@@ -199,31 +203,16 @@ async fn main(spawner: Spawner) {
         OutputConfig::default(),
     );
 
-    let i2c = i2c::master::I2c::new(
-        peripherals.I2C0,
-        i2c::master::Config::default()
-            .with_frequency(Rate::from_khz(1000)),
-    )
-    .unwrap()
-    .with_sda(peripherals.GPIO10)
-    .with_scl(peripherals.GPIO4)
-    .into_async();
-
-    // Pull the ad0 pin low.
-    let mut ad0 = Output::new(
-        peripherals.GPIO1,
-        Level::Low,
-        OutputConfig::default(),
-    );
-    ad0.set_low();
-    // Pull the icm42670 'cs' pin low (it's unused for i2c)
-    let mut cs = Output::new(
-        peripherals.GPIO5,
-        Level::High,
-        OutputConfig::default(),
-    );
-    cs.set_high();
-    
+    let spi = spi::master::Spi::new(
+        peripherals.SPI2,
+        spi::master::Config::default()
+            .with_frequency(Rate::from_khz(24000))
+            .with_mode(Mode::_0)
+    ).unwrap()
+    .with_sck(peripherals.GPIO4)
+    .with_mosi(peripherals.GPIO10)
+    .with_miso(peripherals.GPIO1)
+    .with_cs(peripherals.GPIO5);
 
     let mut d = embassy_time::Delay;
     d.delay_us(200).await;
@@ -241,10 +230,8 @@ async fn main(spawner: Spawner) {
         }),
         fifo_config: Some(Default::default()),
     };
-    let comms = i2c;
-    let i2c_comms = I2cCommsAsync::new(comms)
-        .with_address(0b1101000);
-    let mut imu = Icm42670::new(i2c_comms, embassy_time::Delay); 
+    let comms = spi_regcomms::SpiComms::new(spi);
+    let mut imu = Icm42670::new(comms, embassy_time::Delay); 
     let mut ticker = Ticker::every(Duration::from_millis(10));
     //println!("Powering on");
     println!("Configuring");
