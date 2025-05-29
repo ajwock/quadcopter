@@ -224,7 +224,7 @@ async fn main(spawner: Spawner) {
     };
     let comms = spi_regcomms::SpiComms::new(spi);
     let mut imu = Icm42670::new(comms, embassy_time::Delay); 
-    let mut ticker = Ticker::every(Duration::from_millis(8));
+    let mut ticker = Ticker::every(Duration::from_millis(3));
     //println!("Powering on");
     println!("Configuring");
     imu.configure(config).await.unwrap();
