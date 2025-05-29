@@ -94,6 +94,11 @@ impl MotorDrive {
         debug_println!("Setting collective: {}", self.collective_target);
     }
 
+    pub(crate) fn set_collective_pct_halved(&mut self, pct: u8) {
+        self.collective_target = DegreeFixed32::from_num(pct) / 200;
+        debug_println!("Setting collective: {}", self.collective_target);
+    }
+
     pub(crate) fn set_target_tilt(&mut self, target_tilt: [DegreeFixed32; 3]) {
         self.target_tilt_target = target_tilt;
     }

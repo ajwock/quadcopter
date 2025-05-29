@@ -322,7 +322,7 @@ async fn main(spawner: Spawner) {
         }
         orientation_tracker.track().await;
         let control_vals = CONTROLS.get_vals();
-        motor_drive.set_collective_pct(control_vals.collective);
+        motor_drive.set_collective_pct_halved(control_vals.collective);
         let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];
         debug_println!("Target tilt: {:?}", tilt_ctrl);
         motor_drive.set_target_tilt(tilt_ctrl);
