@@ -8,6 +8,7 @@ use esp_println::println;
 use fixed_macro::fixed;
 use fixed_trigonometry::atan::atan2;
 use fixed::types::I12F20;
+use crate::utils::DigitalPLL;
 
 // This data structure represents integrated and fused IMU data to estimate
 // orientation, speed, and position.
@@ -16,7 +17,7 @@ pub struct OrientationTracker<M: Imu> {
     pub last_gyro_timestamp: u16,
     pub last_gyro_data_halved: [DegreeFixed32; 3],
     pub imuctl: ImuController<M>,
-    pub complimentary_filter_tick_state: u8,
+    pub complimentary_filter_pll: DigitalPLL,
 }
 
 const ACCEL_SCALING_FACTOR: I12F20 = fixed!(0.0011962891: I12F20);
@@ -56,7 +57,7 @@ impl<M: Imu> OrientationTracker<M> {
             last_gyro_timestamp: 0,
             last_gyro_data_halved: [DegreeFixed32::from_bits(0); 3],
             imuctl,
-            complimentary_filter_tick_state: 0,
+            complimentary_filter_pll: DigitalPLL::new(16),
         }
     }
 
@@ -125,15 +126,11 @@ impl<M: Imu> OrientationTracker<M> {
                 self.last_gyro_data_halved[i] = new_halved_reading;
             }
             self.last_gyro_timestamp = timestamp;
-
-            if self.complimentary_filter_tick_state == 16 {
+            self.complimentary_filter_pll.tick(|| {
                 let accel_tilt = raw_accel_to_tilt(accel_data);
                 self.orientation[0] = Self::complementary_filter(self.orientation[0], accel_tilt[0]);
                 self.orientation[1] = Self::complementary_filter(self.orientation[1], accel_tilt[1]);
-                self.complimentary_filter_tick_state = 0;
-            } else {
-                self.complimentary_filter_tick_state += 1;
-            }
+            });
         }
     }
 }

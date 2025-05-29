@@ -70,6 +70,7 @@ use crate::networking_tasks::{
     manage_ap_connection,
     net_task,
 };
+use crate::utils::DigitalPLL;
 
 extern crate alloc;
 
@@ -309,16 +310,13 @@ async fn main(spawner: Spawner) {
     imuctl.flush_msgs().await;
     let mut orientation_tracker = OrientationTracker::new(imuctl)
         .with_initial_tilt(initial_tilt);
-    let mut led_tick_reducer = 0;
+    let mut led_pll = DigitalPLL::new(100);
+    let mut conn_led_pll = DigitalPLL::new(100)
+        .with_initial_count(50);
     println!("Starting main loop");
     loop {
-        if led_tick_reducer == 20 {
-            led.toggle();
-            conn_led.toggle();
-            led_tick_reducer = 0;
-        } else {
-            led_tick_reducer += 1;
-        }
+        led_pll.tick(|| led.toggle());
+        conn_led_pll.tick(|| conn_led.toggle());
         if CONTROLLER_DISCONNECTED.load(Ordering::Relaxed) {
             motor_drive.cut_motors();
             panic!("Controller disconnected");
