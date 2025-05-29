@@ -61,7 +61,7 @@ use embassy_sync::{
 };
 use esp_wifi::EspWifiController;
 use motor_drive::MotorDrive;
-use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU16, AtomicI32};
+use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicI32};
 
 use imu_common::{Imu, ImuCalibrator};
 use crate::networking_tasks::{
@@ -128,6 +128,9 @@ macro_rules! mk_static {
         x
     }};
 }
+
+pub const MILLIS_PER_TICK: i32 = 2;
+pub const TICKS_PER_SECOND: i32 = 1000 / MILLIS_PER_TICK;
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
@@ -224,7 +227,7 @@ async fn main(spawner: Spawner) {
     };
     let comms = spi_regcomms::SpiComms::new(spi);
     let mut imu = Icm42670::new(comms, embassy_time::Delay); 
-    let mut ticker = Ticker::every(Duration::from_millis(3));
+    let mut ticker = Ticker::every(Duration::from_millis(MILLIS_PER_TICK as u64));
     //println!("Powering on");
     println!("Configuring");
     imu.configure(config).await.unwrap();
@@ -347,7 +350,7 @@ fn xy_tilt_input_xlat(input: i8) -> DegreeFixed32 {
     TILT_SCALE * (input as i32)
 }
 
-const ROT_SCALE: DegreeFixed32 = fixed!(0.1: I12F20);
+const ROT_SCALE: DegreeFixed32 = fixed!(0.01: I12F20);
 fn rot_input_xlat(input: i8) -> DegreeFixed32 {
-    ROT_SCALE * (input as i32)
+    ROT_SCALE * (input as i32) * MILLIS_PER_TICK
 }

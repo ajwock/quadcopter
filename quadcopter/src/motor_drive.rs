@@ -88,20 +88,9 @@ impl MotorDrive {
         println!("Motors cut");
     }
 
-    pub(crate) fn set_collective_pct(&mut self, pct: u8) {
-        let pct_clamped = core::cmp::min(pct, 100);
-        self.collective_target = DegreeFixed32::from_num(pct_clamped) / 100;
-        debug_println!("Setting collective: {}", self.collective_target);
-    }
-
     pub(crate) fn set_collective_pct_fixed(&mut self, pct: DegreeFixed32) {
         let pct_clamped = core::cmp::min(pct, fixed!(100: I12F20));
         self.collective_target = pct_clamped / 100;
-        debug_println!("Setting collective: {}", self.collective_target);
-    }
-
-    pub(crate) fn set_collective_pct_halved(&mut self, pct: u8) {
-        self.collective_target = DegreeFixed32::from_num(pct) / 200;
         debug_println!("Setting collective: {}", self.collective_target);
     }
 
@@ -118,9 +107,9 @@ impl MotorDrive {
     const ATTITUDE_POSITION: DegreeFixed32 = fixed!(0.8: I12F20); // fixed!(0.5: I12F20);
     const ATTITUDE_POSITION_CLAMP: DegreeFixed32 = fixed!(0.035: I12F20);
     const ATTITUDE_INTEGRAL: DegreeFixed32 = fixed!(0.015: I12F20);
-    const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = fixed!(0.025: I12F20);
+    const ATTITUDE_INTEGRAL_PERTICK: DegreeFixed32 = fixed!(0.005: I12F20);
     const ATTITUDE_INTEGRAL_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
-    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.95: I12F20);
+    const ATTITUDE_DERIVATIVE: DegreeFixed32 = fixed!(0.6: I12F20);
     const ATTITUDE_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
     const ROTATION_POSITION: DegreeFixed32 = fixed!(0.5: I12F20);
@@ -130,7 +119,6 @@ impl MotorDrive {
     const ROTATION_DERIVATIVE: DegreeFixed32 = fixed!(1: I12F20);
     const ROTATION_DERIVATIVE_CLAMP: DegreeFixed32 = fixed!(0.07: I12F20);
 
-    const TICKS_PER_SECOND: i32 = 100;
     pub(crate) fn attitude_correct(&mut self, data: [DegreeFixed32; 3]) {
         //let fdata: FixedMotionData = data.into();
         if data[0].abs() > 45 || data[1].abs() > 45 {
@@ -148,10 +136,9 @@ impl MotorDrive {
         debug_println!("Orientation error: {:?}", err_v);
         let mut motor_adjustments = [[DegreeFixed32::from_num(0); 2]; 2];
           let collective_scale = self.collective_power / fixed!(0.75: I12F20);
-          self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK * collective_scale);
+          self.attitude_int = core::array::from_fn(|i| self.attitude_int[i] + err_v[i] * Self::ATTITUDE_INTEGRAL_PERTICK * collective_scale * crate::MILLIS_PER_TICK);
         debug_println!("Attitude integral: {:?}", self.attitude_int);
-
-        let derivative: [_; 3] = core::array::from_fn(|i| Self::TICKS_PER_SECOND * (self.previous_orientation[i] - tilt_v[i]));
+        let derivative: [_; 3] = core::array::from_fn(|i| crate::TICKS_PER_SECOND * (self.previous_orientation[i] - tilt_v[i]));
         self.previous_orientation = tilt_v;
         // Scale correction to the collective
 
