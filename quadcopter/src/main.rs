@@ -61,7 +61,7 @@ use embassy_sync::{
 };
 use esp_wifi::EspWifiController;
 use motor_drive::MotorDrive;
-use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU8, AtomicI32};
+use core::sync::atomic::{Ordering, AtomicBool, AtomicI8, AtomicU16, AtomicI32};
 
 use imu_common::{Imu, ImuCalibrator};
 use crate::networking_tasks::{
@@ -78,14 +78,14 @@ pub struct ControlVals {
     pub tilt_x: i8,
     pub tilt_y: i8,
     pub rot_z: i8,
-    pub collective: u8,
+    pub collective: i32,
 }
 
 pub struct Controls {
     pub tilt_x: AtomicI8,
     pub tilt_y: AtomicI8,
     pub rot_z: AtomicI8,
-    pub collective: AtomicU8,
+    pub collective: AtomicI32,
 }
 
 impl Controls {
@@ -110,7 +110,7 @@ pub static CONTROLS: Controls = Controls {
     tilt_x: AtomicI8::new(0),
     tilt_y: AtomicI8::new(0),
     rot_z: AtomicI8::new(0),
-    collective: AtomicU8::new(0),
+    collective: AtomicI32::new(0),
 };
 
 pub static CURRENT_X: AtomicI32 = AtomicI32::new(0);
@@ -322,16 +322,17 @@ async fn main(spawner: Spawner) {
         }
         orientation_tracker.track().await;
         let control_vals = CONTROLS.get_vals();
-        motor_drive.set_collective_pct_halved(control_vals.collective);
+        let collective = DegreeFixed32::from_bits(control_vals.collective);
+        debug_println!("Collective: {}", collective);
+        motor_drive.set_collective_pct_fixed(collective);
         let tilt_ctrl = [xy_tilt_input_xlat(control_vals.tilt_x), xy_tilt_input_xlat(control_vals.tilt_y), DegreeFixed32::ZERO];
         debug_println!("Target tilt: {:?}", tilt_ctrl);
         motor_drive.set_target_tilt(tilt_ctrl);
-        debug_println!("Collective: {}", control_vals.collective);
         let rot_ctrl = rot_input_xlat(control_vals.rot_z);
         motor_drive.move_z_zero(rot_ctrl);
         orientation_tracker.move_z_zero(rot_ctrl);
         let orientation = orientation_tracker.get_orientation();
-        println!("Orientation: {:?}", orientation);
+        debug_println!("Orientation: {:?}", orientation);
         CURRENT_X.store(orientation[0].to_bits(), Ordering::Relaxed);
         CURRENT_Y.store(orientation[1].to_bits(), Ordering::Relaxed);
         CURRENT_Z.store(orientation[2].to_bits(), Ordering::Relaxed);

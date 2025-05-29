@@ -75,7 +75,7 @@ impl MotorDrive {
         for i in 0..3 {
             self.target_tilt[i] = utils::rate_limit(self.target_tilt[i], self.target_tilt_target[i], fixed!(0.5: I12F20));
         }
-        println!("target_tilt: {:?}", self.target_tilt);
+        debug_println!("target_tilt: {:?}", self.target_tilt);
         //self.target_tilt = self.target_tilt_target;
     }
 
@@ -91,6 +91,12 @@ impl MotorDrive {
     pub(crate) fn set_collective_pct(&mut self, pct: u8) {
         let pct_clamped = core::cmp::min(pct, 100);
         self.collective_target = DegreeFixed32::from_num(pct_clamped) / 100;
+        debug_println!("Setting collective: {}", self.collective_target);
+    }
+
+    pub(crate) fn set_collective_pct_fixed(&mut self, pct: DegreeFixed32) {
+        let pct_clamped = core::cmp::min(pct, fixed!(100: I12F20));
+        self.collective_target = pct_clamped / 100;
         debug_println!("Setting collective: {}", self.collective_target);
     }
 

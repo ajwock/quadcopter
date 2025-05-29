@@ -50,7 +50,7 @@ pub async fn manage_receiver_connection(stack: Stack<'static>) {
         }
         CONTROLLER_CONNECTED.signal(());
         debug_println!("Got tcp connection");
-        let mut buf = [0u8; 4];
+        let mut buf = [0u8; 7];
         loop {
             match sock.read(&mut buf).await {
                 Ok(0) => {
@@ -59,16 +59,17 @@ pub async fn manage_receiver_connection(stack: Stack<'static>) {
                     break
                 }
                 Ok(len) => {
-                    if len != 4 {
+                    if len != 7 {
                         debug_println!("Got bad packet length: {}", len);
                         continue
                     }
                     debug_println!("Got packet: {:?}", &buf[0..len]);
+                    let col_buf = [buf[3], buf[4], buf[5], buf[6]];
                     let vals = ControlVals {
                         tilt_x: buf[0] as i8,
                         tilt_y: buf[1] as i8,
                         rot_z: buf[2] as i8,
-                        collective: buf[3],
+                        collective: i32::from_be_bytes(col_buf),
                     };
                     CONTROLS.update(vals);
                     debug_println!("Updated controls: {:?}", vals);
