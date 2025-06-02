@@ -1,0 +1,295 @@
+73191565226666
+Imported
+0_ohm
+Resistor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal, (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator
+resistor
+0
+2
+1
+Imported
+2-bb
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+2
+2
+Imported
+3-bb
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+3
+3
+Imported
+3-rightangle-smt
+
+
+0
+3
+3
+Imported
+4-bb
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+4
+4
+Imported
+4-rightangle-smt
+
+
+0
+4
+4
+Imported
+5-bb
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+5
+5
+Imported
+5-rightangle-smt
+
+
+0
+5
+5
+Imported
+6-bb
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+6
+6
+Imported
+8-bb
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+8
+8
+Imported
+0603_cap
+
+
+0
+2
+2
+Imported
+0603_resistor
+
+
+0
+2
+2
+Imported
+BC548BTA
+3-Lead TO-92, 0.2 in-line Ammo ver.
+Transistor BJT NPN
+0
+3
+3
+Imported
+DIP781W56P254L950H533Q8N
+PDIP
+Integrated Circuit
+0
+8
+8
+Imported
+DIP794W56P254L3486H508Q28N
+28-Lead Skinny Plastic Dual In-Line (SP) - 300 mil Body [SPDIP]
+Integrated Circuit
+0
+28
+28
+Imported
+ESP32C3MINI1H4X
+13.2 mm x 16.6 mm x 2.4 mm
+Undefined or Miscellaneous
+0
+61
+61
+Imported
+ESP32C3MINI1H4X_copy
+13.2 mm x 16.6 mm x 2.4 mm
+Undefined or Miscellaneous
+0
+61
+61
+Imported
+ESP32C3MINI1H4X_hand_solder
+13.2 mm x 16.6 mm x 2.4 mm
+Undefined or Miscellaneous
+0
+61
+61
+Imported
+ESP32S3WROOM1N8R2
+ESP32-S3-WROOM-1-N8R2-3
+Integrated Circuit
+0
+49
+49
+Imported
+GCM033C70J104KE02D
+GCM03
+Capacitor
+0
+2
+2
+Imported
+ICM-42670-hand-solder
+
+
+0
+14
+14
+Imported
+IC_ICM-42670-P
+
+
+0
+14
+14
+Imported
+IIM42352
+14 Lead LGA (2.5x3x0.91)_1
+Accelerometer
+0
+14
+14
+Imported
+LE33CZTR
+TO-92_AMMO
+Integrated Circuit
+0
+3
+3
+Imported
+QFP50P1200X1200X160-64N
+LQF64
+Integrated Circuit
+0
+64
+64
+Imported
+SFV24R3STBE1HLF
+SFV24R-3STBE1HLF-2
+Connector
+0
+26
+26
+Imported
+SM6F22AY
+SOD128FLAT
+Schottky Diode
+0
+2
+2
+Imported
+SOD2513X120N
+SOD323_2024-1
+TVS Diode (Bi-directional)
+0
+2
+2
+Imported
+SOIC127P600X175-8N
+8-Pin SOIC 150-mil (Package Code SN)
+Integrated Circuit
+0
+8
+8
+Imported
+SON108P200X400X115-8N
+VCNL3040
+Integrated Circuit
+0
+8
+8
+Imported
+SOP64P601X175-16N
+GN Package 16-Lead Plastic SSOP (Narrow 0.150)
+Integrated Circuit
+0
+16
+16
+Imported
+SOT95P280X100-3N
+TSMT_3
+MOSFET (N-Channel)
+0
+3
+3
+Imported
+SOT95P280X110-6N
+DDC0006A
+Integrated Circuit
+0
+6
+6
+Imported
+SOT233P700X180-4N
+SOT223_2020
+Integrated Circuit
+0
+4
+4
+Imported
+TO254P470X1016X1965-3P
+KCS0003B
+Integrated Circuit
+0
+3
+3
+Imported
+UJCHP23SMTTR
+UJC-HP2-3-SMT-TR-1
+Connector
+0
+10
+10
+Imported
+USB309030A
+USB3090-30-A-2
+Connector
+0
+9
+9
+Imported
+VN10KN3-G
+
+
+0
+3
+3
+Imported
+armboard_out
+
+
+0
+16
+16
+Imported
+esp32c3_boardout
+
+
+0
+16
+16
+Imported
+inductor_smt
+
+
+0
+2
+2
+Imported
+usb_a_vertical
+
+
+0
+6
+5
