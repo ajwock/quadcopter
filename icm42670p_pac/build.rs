@@ -4,7 +4,7 @@ use regcommsgen::{
 };
 
 
-const PSPEC_PATH: &'static str = "icm42670p.yaml";
+const PSPEC_PATH: &'static str = "./icm42670p.yaml";
 fn main() {
     println!("cargo:rerun_if_changed={}", PSPEC_PATH);
 

@@ -16,7 +16,6 @@ use esp_hal::gpio::{
 };
 use esp_println::println;
 
-
 extern crate alloc;
 
 #[esp_hal_embassy::main]
@@ -48,21 +47,28 @@ async fn main(spawner: Spawner) {
     let mut i2c = i2c::master::I2c::new(
         peripherals.I2C0,
         i2c::master::Config::default()
-            .with_frequency(Rate::from_khz(50)),
+            .with_frequency(Rate::from_khz(100)),
     )
     .unwrap()
-    .with_sda(peripherals.GPIO47)
-    .with_scl(peripherals.GPIO48);
+    .with_sda(peripherals.GPIO1)
+    .with_scl(peripherals.GPIO2);
 
     // TODO: Spawn some tasks
     let _ = spawner;
 
     Timer::after(Duration::from_millis(500)).await;
 
-    let mut buf = [0u8];
-    i2c.write_read(61, &[0x0a], &mut buf).unwrap();
-    i2c.write(60, &[0xff, 0x01]).unwrap();
-    println!("Device id: {:?}", buf);
+    for i in 0..128 {
+        let mut buf = [0u8];
+        let result = i2c.write_read(i, &[0x0a], &mut buf);
+        if let Err(i2c::master::Error::AcknowledgeCheckFailed(i2c::master::AcknowledgeCheckFailedReason::Address)) = result {
+            println!("Address 0x{i:x} bad");
+        } else {
+            println!("Interesting address 0x{i:x}");
+        }
+        Timer::after(Duration::from_millis(1)).await;
+    }
+
     loop {
         Timer::after(Duration::from_millis(300)).await;
         led.toggle();
